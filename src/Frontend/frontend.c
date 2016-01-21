@@ -200,25 +200,25 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
             {
 		if (type == rush_message_type_new_file)
 		{
-			// TYPE == 1
-			// MCAST MSG NEW FILE
-			// name_len
-			// content_len
-			// digest_type
-			// name
-			// digest
-			// FIXME
+		    // TYPE == 1
+		    // MCAST MSG NEW FILE
+		    // name_len
+		    // content_len
+		    // digest_type
+		    // name
+		    // digest
+		    // FIXME
 		}
 		else if (type == rush_message_type_list_files)
 		{
-			// TYPE == 2
-			// UNICAST RQST LIST OF FILES
-			// FIXME
+		    // TYPE == 2
+		    // UNICAST RQST LIST OF FILES
+		    // FIXME
 		}
 		else if (type == rush_message_type_get_file)
                 {
-			// TYPE == 4
-			// UNICAST RQST CONTENT OF A FILE
+		    // TYPE == 4
+		    // UNICAST RQST CONTENT OF A FILE
                     uint16_t name_len_net = 0;
 
                     got = read(conn_socket,
@@ -287,14 +287,14 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
                 }
 		else if (type == rush_message_type_get_file_response)
 		{
-			// TYPE == 5
-			// UNICAST MSG SEND CONTENT OF A FILE
-			// status
-			// digest_type
-			// content_len
-			// content
-			// digest
-			// FIXME
+		    // TYPE == 5
+		    // UNICAST MSG SEND CONTENT OF A FILE
+		    // status must not be negative
+		    // digest_type
+		    // content_len
+		    // content
+		    // digest
+		    // FIXME
 		}
                 else
                 {
