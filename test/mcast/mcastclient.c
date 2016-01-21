@@ -3,8 +3,11 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
 
 struct sockaddr_in localSock;
 struct ip_mreq group;
@@ -55,7 +58,7 @@ int main(int argc, char *argv[])
     /* called for each local interface over which the multicast */
     /* datagrams are to be received. */
     group.imr_multiaddr.s_addr = inet_addr("239.42.3.1");
-    group.imr_interface.s_addr = inet_addr("192.168.0.168");
+    group.imr_interface.s_addr = inet_addr("192.168.11.37");
     if(setsockopt(sd, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
     {
         perror("Adding multicast group error");
