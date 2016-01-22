@@ -120,6 +120,7 @@ int main(int argc, char **argv)
     {
         /* Upload a file */
         printf("Upload file : %s\n", upl_value);
+        /* Reading content of file */
         FILE *fp;
         size_t file_size;
         char *buffer_file;
@@ -143,8 +144,11 @@ int main(int argc, char **argv)
         printf("Size of uploaded file : %zu\n", file_size);
         /* End debug logs */
 
+
         buffer_file = calloc(1, file_size + 1);
         fread(buffer_file, file_size, 1 , fp);
+
+        /* End reading content of file */
 
         message_length = file_size + static_size;
         message = malloc(message_length * sizeof (uint8_t));
@@ -154,8 +158,8 @@ int main(int argc, char **argv)
         message[2] = 0; // Set status code, it is 0 since fp != null
         message[3] = 0; // Digest not handled yet 
 
-        /* Size of file on 64 bits */
         
+        /* Size of file on 64 bits */
         int power = 64 - 8;
         message[4] = file_size / pow(2, power);
         for (int i = 5; i < 11; i++) 
