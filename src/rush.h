@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define FRONTEND_GROUP "239.42.3.2"
+#define SAN_GROUP "239.42.3.1"
+#define SAN_PORT 4321
+
 typedef enum
 {
     rush_message_type_none                = 0,
