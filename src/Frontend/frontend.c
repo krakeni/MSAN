@@ -40,7 +40,7 @@ void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
     mcast_sock.sin_addr.s_addr = inet_addr(SAN_GROUP);
     mcast_sock.sin_port = htons(SAN_PORT);
 
-    Local_interface.s_addr = inet_addr("192.168.1.212");
+    Local_interface.s_addr = inet_addr(LOCAL_IFACE);
     if(setsockopt(socket, IPPROTO_IP, IP_MULTICAST_IF, (char *)&Local_interface, sizeof(Local_interface)) < 0)
     {
         perror("Setting local interface error");
@@ -516,14 +516,14 @@ void rush_frontend_bind_multicast_socket(int * const multicast_socket)
         perror("Setting SO_REUSEADDR error");
     memset((char *) &localSock, 0, sizeof(localSock));
     localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(4243);
+    localSock.sin_port = htons(FE_MCAST_PORT);
     localSock.sin_addr.s_addr = INADDR_ANY;
 
     if(bind(*multicast_socket, (struct sockaddr*)&localSock, sizeof(localSock)))
         perror("Binding datagram socket error");
 
     group.imr_multiaddr.s_addr = inet_addr(FRONTEND_GROUP);
-    group.imr_interface.s_addr = inet_addr("192.168.1.212");
+    group.imr_interface.s_addr = inet_addr(LOCAL_IFACE);
     if(setsockopt(*multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
         perror("Adding multicast group error");
 }
