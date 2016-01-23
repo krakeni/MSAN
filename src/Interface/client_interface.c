@@ -1,5 +1,6 @@
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <inttypes.h>
 #include <netinet/in.h>
 #include <ctype.h>
 #include <netdb.h>
@@ -10,6 +11,16 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <math.h>
+
+int send_socket(int socket_desc, uint8_t *message, long long message_length)
+{
+    if( send(socket_desc , message , message_length, 0) < 0)
+    {
+        puts("Send failed");
+        return 1;
+    }
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
@@ -84,8 +95,8 @@ int main(int argc, char **argv)
      
     puts("Connected\n");
      
-    size_t message_length = 0;
-    uint8_t *message;
+    long long  message_length = 0;
+//    uint8_t *message;
     if (get_value != NULL)
     {
         /* Get a file */
@@ -93,7 +104,7 @@ int main(int argc, char **argv)
         size_t filename_len = strlen(get_value);
         size_t static_size = 4;
         message_length = static_size + filename_len;
-        message = malloc(message_length * sizeof (uint8_t));
+        uint8_t message[message_length];
 
         message[0] = 1; // Set version
         message[1] = 4; // Set message type
@@ -102,19 +113,20 @@ int main(int argc, char **argv)
         message[3] = filename_len - message[2];
 
         memcpy(message + static_size, get_value, filename_len);
-        for (size_t i = 0; i < message_length; i++)
+        for (size_t i = 0; i < (size_t)message_length; i++)
             printf("%d\n", message[i]);
+        return send_socket(socket_desc, message, message_length);
     }
     else if (list_flag == 1)
     {
         /* List files */
         message_length = 2;
-        message = malloc(message_length * sizeof(uint8_t));
-
+        uint8_t message[2];
         message[0] = 1;
         message[1] = 2;
 
         printf("List files\n");
+        return send_socket(socket_desc, message, message_length);
     }
     else if (upl_value != NULL)
     {
@@ -122,7 +134,7 @@ int main(int argc, char **argv)
         printf("Upload file : %s\n", upl_value);
         /* Reading content of file */
         FILE *fp;
-        size_t file_size;
+        long long file_size;
         char *buffer_file;
         int errnum;
         size_t static_size = 13;
@@ -136,38 +148,61 @@ int main(int argc, char **argv)
             return 0;
         }
 
-        fseek( fp , 0L , SEEK_END);
+        fseek(fp , 0L , SEEK_END);
         file_size = ftell(fp);
         rewind(fp);
 
         /* Debug logs */
-        printf("Size of uploaded file : %zu\n", file_size);
+        printf("Size of uploaded file : %llu\n", file_size);
         /* End debug logs */
 
 
         buffer_file = calloc(1, file_size + 1);
         fread(buffer_file, file_size, 1 , fp);
-
         /* End reading content of file */
 
         message_length = file_size + static_size;
-        message = malloc(message_length * sizeof (uint8_t));
+       // message = malloc(message_length * sizeof (uint8_t));
+        uint8_t message[message_length];
 
         message[0] = 1; // Set version
         message[1] = 5; // Set message type
         message[2] = 0; // Set status code, it is 0 since fp != null
         message[3] = 0; // Digest not handled yet 
-
         
         /* Size of file on 64 bits */
+
         int power = 64 - 8;
         message[4] = file_size / pow(2, power);
+        long long current_size = file_size;
+
         for (int i = 5; i < 11; i++) 
         {
-            message[i] = (file_size - message[i - 1]) / pow(2, power);
             power -= 8;
+            if (message[i - 1] == 0)
+                message[i] = (file_size / pow(2, power));
+            else
+            {
+                current_size = current_size - (message[i - 1] * pow(2, power + 8));
+                message[i] = current_size/pow(2, power);
+            }
+
         }
-        message[11] = file_size - message[10];
+
+        message[11] = file_size - (message[10] * 256);
+        
+        /* Debug logs */
+        printf("byte 4: %d\n", message[5]);
+        printf("byte 5: %d\n", message[5]);
+        printf("byte 6: %d\n", message[6]);
+        printf("byte 7: %d\n", message[7]);
+        printf("byte 8: %d\n", message[8]);
+        printf("byte 9: %d\n", message[9]);
+        printf("byte 10: %d\n", message[10]);
+        printf("byte 11: %d\n", message[11]);
+
+        printf("Message length = %llu\n", message_length);
+        /* End debug logs */
 
         /* Copying file content to buffer which will be send in the socket */
         memcpy(message + static_size - 1, buffer_file, file_size); 
@@ -175,23 +210,10 @@ int main(int argc, char **argv)
         /* Digest value set to 0. Not implemented yet. */
         message[file_size + static_size] = 0;
 
-        /* Debug logs */
-        printf("Buffer_file = %s\n", buffer_file);
-        printf("Message length = %zu\n", message_length);
-        for (size_t i = 0; i < file_size + static_size; i++)
-            printf("%zu: %d\n", i, message[i]);
-        /* End debug logs */
-
         fclose(fp);
         free(buffer_file);
+        return send_socket(socket_desc, message, message_length);
     }
-
-    if( send(socket_desc , message , message_length, 0) < 0)
-    {
-        puts("Send failed");
-        return 1;
-    }
-
     return 0;
 }
 
