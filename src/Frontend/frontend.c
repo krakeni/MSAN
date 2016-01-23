@@ -173,6 +173,49 @@ static void rush_frontend_handle_dir_event(rush_frontend_config const * const co
     while (finished == false);
 }
 
+static int BE_advertise_file_handle(/*rush_frontend_config const * const config,*/
+				       int const conn_socket)
+{
+    int result = 0;
+    uint16_t name_len = 0;
+
+    int got = read(conn_socket,
+            &name_len,
+            sizeof name_len);
+    if (got == sizeof name_len)
+    {
+	char name[name_len];
+	got = read(conn_socket,
+		   &name,
+		   sizeof(name));
+	if (got == name_len)
+	{
+	    //Il faut faire quoi ?
+	}
+	else
+	{
+	    result = errno;
+	    fprintf(stderr, "Error, the name's lengh is not as long as specified");
+	}
+    }
+    return result;
+}
+
+static int BE_alive_message(/*rush_frontend_config const * const config,*/
+				       int const conn_socket)
+{
+    int result = 0;
+    //On va récupérer l'IP de la machine qui a répondu et lui uploader le fichier
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
+    char clientip[20];
+    strcpy(clientip, inet_ntoa(addr.sin_addr));
+    printf("l'ip du Back End qui a répondu alive est : %s\n", clientip);
+    
+    return result;
+}
+
 static int rush_frontend_handle_new_connection(rush_frontend_config const * const config,
         int const conn_socket)
 {
@@ -198,23 +241,18 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 
             if (got == sizeof type)
             {
-                if (type == rush_message_type_new_file)
-                {
-                    // TYPE == 1
-                    // MCAST MSG NEW FILE
-                    // name_len
-                    // content_len
-                    // digest_type
-                    // name
-                    // digest
-                    // FIXME
+		if (type == rush_message_type_list_files)
+		{
+		    // TYPE == 2
+		    // UNICAST RQST LIST OF FILES
+		    // FIXME
                 }
-                else if (type == rush_message_type_list_files)
-                {
-                    // TYPE == 2
-                    // UNICAST RQST LIST OF FILES
-                    // FIXME
-                }
+		else if (type == rush_message_type_list_files_response)
+		{
+		    // TYPE == 3
+		    // Back-end unicast message sending the lists of all files
+		    // 
+		}
                 else if (type == rush_message_type_get_file)
                 {
                     // TYPE == 4
@@ -239,7 +277,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
                             if (got == name_len)
                             {
                                 name[name_len] = '\0';
-
+ 
                                 fprintf(stdout,
                                         "DEBUG: received request for file %s\n",
                                         name);
@@ -288,14 +326,25 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
                 else if (type == rush_message_type_get_file_response)
                 {
                     // TYPE == 5
-                    // UNICAST MSG SEND CONTENT OF A FILE
-                    // status must not be negative
-                    // digest_type
-                    // content_len
-                    // content
-                    // digest
-                    // FIXME
+		    // UNICAST MSG SEND CONTENT OF A FILE
+		    // status must not be negative
+		    // digest_type
+		    // content_len
+		    // content
+		    // digest
+		    // FIXME
                 }
+		else if (type == rush_message_type_file_available_here)
+		{
+		    // TYPE = 6
+		    // Back-end multicast message advertising the disponibility of a file
+		    
+		}
+		else if (type == rush_message_type_alive)
+		{
+		    // TYPE = 7
+		    // Back-end alive multicast message
+		}
                 else
                 {
                     fprintf(stderr,
@@ -395,7 +444,7 @@ static int rush_frontend_listen_on_unicast(char const * const unicast_bind_addr_
             unicast_bind_port_str,
             &hints,
             &storage);
-
+    
     if (result == 0)
     {
         *unicast_socket = socket(storage->ai_family,
