@@ -8,6 +8,13 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define FRONTEND_GROUP "239.42.3.2"
+#define SAN_GROUP "239.42.3.1"
+#define SAN_PORT 4321
+//Changes this IP according to your Interface IP
+#define LOCAL_IFACE "192.168.1.212"
+#define FE_MCAST_PORT 4243
+
 typedef enum
 {
     rush_message_type_none                = 0,

@@ -173,6 +173,214 @@ static void rush_backend_handle_dir_event(rush_backend_config const * const conf
     while (finished == false);
 }
 
+static void BE_FE_send_content_message(rush_backend_config const * const config,
+        int const conn_socket)
+{
+    int result = EINVAL;
+    ssize_t got = 0;
+    assert(config != NULL);
+
+    // TYPE == 5
+    // UNICAST MSG SEND CONTENT OF A FILE
+    // status must not be negative
+    uint8_t status = 0;
+    uint64_t content_len = 0;
+    char * content = NULL;
+
+    got = read(conn_socket,
+	    &status,
+	    sizeof status);
+
+    if (got == sizeof status)
+    {
+	// digest_type
+	uint8_t digest_type = rush_digest_type_none;
+
+	got = read(conn_socket,
+		&digest_type,
+		sizeof digest_type);
+
+	if (got == sizeof digest_type)
+	{
+	    // content_len
+	    uint64_t content_len_net = 0;
+
+	    got = read(conn_socket,
+		    &content_len_net,
+		    sizeof content_len_net);
+
+	    if (got == sizeof content_len_net)
+	    {
+		content_len = ntohs(content_len_net);
+		if (content_len == 0 && digest_type != rush_digest_type_none)
+		{
+		    fprintf(stderr,
+			    "Error in digest type of send_file message, should be None.\n");
+		}			    
+		else
+		{
+		    // Status code matches non-negative errno values.
+		    // If the status code is non-zero, content length
+		    // MUST to be set to zero.
+		    if (status == 0)
+		    {
+			content = malloc(content_len + 1);
+
+			if (content != NULL)
+			{
+			    got = read(conn_socket,
+				    content,
+				    content_len);
+
+			    if (got == sizeof content_len)
+			    {
+				content[content_len] = '\0';
+				uint8_t digest_len_net = 0;
+
+				switch (digest_type)
+				{
+				    case rush_digest_type_sha1:
+					digest_len_net = 20;
+					break;
+				    case rush_digest_type_sha256:
+					digest_len_net = 32;
+					break;
+				    case rush_digest_type_blake2b:
+					digest_len_net = 64;
+					break;
+				    case rush_digest_type_none:
+					digest_len_net = 0;
+					break;
+				}
+
+				uint8_t const digest_len = ntohs(digest_len_net);
+				char * digest = malloc(digest_len + 1);
+
+				if (digest != NULL)
+				{
+				    got = read(conn_socket,
+					    digest,
+					    digest_len);
+
+				    if (got == digest_len)
+				    {
+					digest[digest_len] = '\0';
+				    }
+				    else if (got == -1)
+				    {
+					result = errno;
+					fprintf(stderr,
+						"Error reading digest of send_file message: %d\n",
+						result);
+				    }
+				    else
+				    {
+					fprintf(stderr,
+						"Not enough data available, skipping.\n");
+				    }
+
+				    free(digest);
+				    digest = NULL;
+				}
+				else
+				{
+				    result = ENOMEM;
+				    fprintf(stderr,
+					    "Error allocating memory for digest of size %"PRIu16": %d\n",
+					    digest_len,
+					    result);
+				}
+			    }
+			    else if (got == -1)
+			    {
+				result = errno;
+				fprintf(stderr,
+					"Error reading content of send_file message: %d\n",
+					result);
+			    }
+			    else
+			    {
+				fprintf(stderr,
+					"Not enough data available, skiping.\n");
+			    }
+
+			    free(content);
+			    content = NULL;
+			}
+			else
+			{
+			    result = ENOMEM;
+			    fprintf(stderr,
+				    "Error rallocating memory for content of size %"PRIu64": %d\n",
+				    content_len,
+				    result);
+			}
+		    }
+		    else
+		    {
+			if (content_len != 0)
+			{
+			    fprintf(stderr,
+				    "Error in content length of send_file message, should be 0.\n");
+			}
+			else
+			{
+			    fprintf(stderr,
+				    "Error in send_file message: %d\n",
+				    status);
+			}
+		    }
+		}
+	    }
+	    else if (got == -1)
+	    {
+		result = errno;
+		fprintf(stderr,
+			"Error reading content length of send_file message: %d\n",
+			result);
+	    }
+	    else
+	    {
+		fprintf(stderr,
+			"Not enough data available, skipping.\n");
+	    }
+	}
+	else if (got == -1)
+	{
+	    result = errno;
+	    fprintf(stderr,
+		    "Error reading digest type of send_file message: %d\n",
+		    result);
+	}
+	else
+	{
+	    fprintf(stderr,
+		    "Not enough data available, skipping.\n");
+	}
+    }
+    else if (got == -1)
+    {
+	result = errno;
+	fprintf(stderr,
+		"Error reading status code of send_file message: %d\n",
+		result);
+    }
+    else
+    {
+	fprintf(stderr,
+		"Not enough data available, skipping.\n");
+    }
+
+    FILE * file = NULL;
+    file = fopen("test.txt", "w+");
+
+    if (file != NULL)
+    {
+	fwrite(content, content_len, 1, file);
+    }
+    fclose(file);
+}
+
 static int rush_backend_handle_new_connection(rush_backend_config const * const config,
         int const conn_socket)
 {
@@ -198,15 +406,21 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
 
             if (got == sizeof type)
             {
-                if (type == rush_message_type_list_files)
+		if (type == rush_message_type_new_file)
+		{
+		    // TYPE == 1
+		    // name_len
+		    // content_len
+		    // digest_type
+		    // name
+		    // digest
+		    // FIXME
+		}
+		else if (type == rush_message_type_list_files)
                 {
                     // TYPE == 2
                     // UNICAST RQST LIST OF FILES
                     // FIXME
-                }
-                else if (type == rush_message_type_list_files)
-                {
-                    // TYPE = 3 
                 }
                 else if (type == rush_message_type_get_file)
                 {
@@ -280,30 +494,12 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 }
                 else if (type == rush_message_type_get_file_response)
                 {
-                    // TYPE == 5
-                    // UNICAST MSG SEND CONTENT OF A FILE
-                    // status must not be negative
-                    // digest_type
-                    // content_len
-                    // content
-                    // digest
-                    // FIXME
+		    // TYPE == 5
+		    BE_FE_send_content_message(config, conn_socket);
                 }
-                else if (type == rush_message_type_file_available_here)
+                else if (type == rush_message_type_discover)
                 {
-                    // TYPE == 6 
-                    // MULTICAST MSG SEND AVAILIBILITY OF A FILE
-                    // version
-                    // message type
-                    // name length
-                    // name
-                    //FIXME 
-                }
-                else if (type == rush_message_type_alive)
-                {
-                    // TYPE == 7
-                    // Version
-                    // MSG type
+                    // TYPE == 8
                 }
                 else
                 {
