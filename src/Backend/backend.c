@@ -176,6 +176,7 @@ static void rush_backend_handle_dir_event(rush_backend_config const * const conf
 static void BE_FE_send_content_message(rush_backend_config const * const config,
         int const conn_socket)
 {
+    int result = EINVAL;
     ssize_t got = 0;
     assert(config != NULL);
 
@@ -212,8 +213,9 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
 	    {
 		content_len = ntohs(content_len_net);
 		if (content_len == 0 && digest_type != rush_digest_type_none)
-		{ // error  If the content length is zero
-		    // then digest type MUST be set to None.
+		{
+		    fprintf(stderr,
+			    "Error in digest type of send_file message, should be None.\n");
 		}			    
 		else
 		{
@@ -264,48 +266,119 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
 				    {
 					digest[digest_len] = '\0';
 				    }
+				    else if (got == -1)
+				    {
+					result = errno;
+					fprintf(stderr,
+						"Error reading digest of send_file message: %d\n",
+						result);
+				    }
+				    else
+				    {
+					fprintf(stderr,
+						"Not enough data available, skipping.\n");
+				    }
+
+				    free(digest);
+				    digest = NULL;
 				}
 				else
-				{ // error alloc digest
+				{
+				    result = ENOMEM;
+				    fprintf(stderr,
+					    "Error allocating memory for digest of size %"PRIu16": %d\n",
+					    digest_len,
+					    result);
 				}
 			    }
 			    else if (got == -1)
-			    { // error reading content
+			    {
+				result = errno;
+				fprintf(stderr,
+					"Error reading content of send_file message: %d\n",
+					result);
 			    }
 			    else
-			    { // error not enough data available
+			    {
+				fprintf(stderr,
+					"Not enough data available, skiping.\n");
 			    }
+
+			    free(content);
+			    content = NULL;
 			}
 			else
-			{ // error allocating memory
+			{
+			    result = ENOMEM;
+			    fprintf(stderr,
+				    "Error rallocating memory for content of size %"PRIu64": %d\n",
+				    content_len,
+				    result);
 			}
 		    }
 		    else
 		    {
 			if (content_len != 0)
-			{ // error content_len must be 0
+			{
+			    fprintf(stderr,
+				    "Error in content length of send_file message, should be 0.\n");
 			}
 			else
-			{ // error status code
+			{
+			    fprintf(stderr,
+				    "Error in send_file message: %d\n",
+				    status);
 			}
 		    }
 		}
 	    }
+	    else if (got == -1)
+	    {
+		result = errno;
+		fprintf(stderr,
+			"Error reading content length of send_file message: %d\n",
+			result);
+	    }
 	    else
-	    { // error reading content_len
+	    {
+		fprintf(stderr,
+			"Not enough data available, skipping.\n");
 	    }
 	}
+	else if (got == -1)
+	{
+	    result = errno;
+	    fprintf(stderr,
+		    "Error reading digest type of send_file message: %d\n",
+		    result);
+	}
 	else
-	{ // error reading digest_type
+	{
+	    fprintf(stderr,
+		    "Not enough data available, skipping.\n");
 	}
     }
-    else
-    { // error reading status
+    else if (got == -1)
+    {
+	result = errno;
+	fprintf(stderr,
+		"Error reading status code of send_file message: %d\n",
+		result);
     }
-    // FIXME
+    else
+    {
+	fprintf(stderr,
+		"Not enough data available, skipping.\n");
+    }
+
     FILE * file = NULL;
     file = fopen("test.txt", "w+");
-    fwrite(content, content_len, 1, file);
+
+    if (file != NULL)
+    {
+	fwrite(content, content_len, 1, file);
+    }
+    fclose(file);
 }
 
 static int rush_backend_handle_new_connection(rush_backend_config const * const config,
