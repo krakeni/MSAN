@@ -38,7 +38,7 @@ void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
     memset((char *) &mcast_sock, 0, sizeof(mcast_sock));
     mcast_sock.sin_family = AF_INET;
     mcast_sock.sin_addr.s_addr = inet_addr(SAN_GROUP);
-    mcast_sock.sin_port = htons(SAN_PORT);
+    mcast_sock.sin_port = htons(BE_MCAST_PORT);
 
     Local_interface.s_addr = inet_addr(LOCAL_IFACE);
     if(setsockopt(socket, IPPROTO_IP, IP_MULTICAST_IF, (char *)&Local_interface, sizeof(Local_interface)) < 0)
@@ -603,6 +603,7 @@ int main(void)
     int unicast_socket = -1;
     int inotify_fd = -1;
     int dir_inotify_fd = -1;
+
     int multicast_socket = -1;
     rush_frontend_bind_multicast_socket(&multicast_socket);
 

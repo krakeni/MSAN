@@ -6,7 +6,7 @@ LDFLAGS	 = -fPIC -pie -Wl,-z,relro,-z,now -Wl,-z,noexecstack
 
 all: $(BINARIES)
 
-frontend: backend.c ../rush.h
+backend: backend.c ../rush.h
 	$(CC) $(CFLAGS) $(LDFLAGS) $< -o $@
 
 clean:

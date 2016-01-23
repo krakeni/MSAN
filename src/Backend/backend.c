@@ -28,6 +28,30 @@ typedef struct
 
 } rush_backend_config;
 
+void rush_backend_send_mcast_msg_san(uint8_t *databuf, int datalen)
+{
+    struct in_addr Local_interface = (struct in_addr) { 0 };
+    struct sockaddr_in mcast_sock = (struct sockaddr_in) { 0 };
+
+    int socket = -1;
+    memset((char *) &mcast_sock, 0, sizeof(mcast_sock));
+    mcast_sock.sin_family = AF_INET;
+    mcast_sock.sin_addr.s_addr = inet_addr(FRONTEND_GROUP);
+    mcast_sock.sin_port = htons(FE_MCAST_PORT);
+
+    Local_interface.s_addr = inet_addr(LOCAL_IFACE);
+    if(setsockopt(socket, IPPROTO_IP, IP_MULTICAST_IF, (char *)&Local_interface, sizeof(Local_interface)) < 0)
+    {
+        perror("Setting local interface error");
+        exit(1);
+    }
+    if(sendto(socket, databuf, datalen, 0, (struct sockaddr*)&mcast_sock, sizeof(mcast_sock)) < 0)
+    {
+        perror("Sending datagram message error");
+    }
+}
+
+
 static int rush_backend_watch_dir(char const * const dir,
         int * const inotify_fd,
         int * const dir_inotify_fd)
@@ -188,187 +212,187 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
     char * content = NULL;
 
     got = read(conn_socket,
-	    &status,
-	    sizeof status);
+            &status,
+            sizeof status);
 
     if (got == sizeof status)
     {
-	// digest_type
-	uint8_t digest_type = rush_digest_type_none;
+        // digest_type
+        uint8_t digest_type = rush_digest_type_none;
 
-	got = read(conn_socket,
-		&digest_type,
-		sizeof digest_type);
+        got = read(conn_socket,
+                &digest_type,
+                sizeof digest_type);
 
-	if (got == sizeof digest_type)
-	{
-	    // content_len
-	    uint64_t content_len_net = 0;
+        if (got == sizeof digest_type)
+        {
+            // content_len
+            uint64_t content_len_net = 0;
 
-	    got = read(conn_socket,
-		    &content_len_net,
-		    sizeof content_len_net);
+            got = read(conn_socket,
+                    &content_len_net,
+                    sizeof content_len_net);
 
-	    if (got == sizeof content_len_net)
-	    {
-		content_len = ntohs(content_len_net);
-		if (content_len == 0 && digest_type != rush_digest_type_none)
-		{
-		    fprintf(stderr,
-			    "Error in digest type of send_file message, should be None.\n");
-		}			    
-		else
-		{
-		    // Status code matches non-negative errno values.
-		    // If the status code is non-zero, content length
-		    // MUST to be set to zero.
-		    if (status == 0)
-		    {
-			content = malloc(content_len + 1);
+            if (got == sizeof content_len_net)
+            {
+                content_len = ntohs(content_len_net);
+                if (content_len == 0 && digest_type != rush_digest_type_none)
+                {
+                    fprintf(stderr,
+                            "Error in digest type of send_file message, should be None.\n");
+                }			    
+                else
+                {
+                    // Status code matches non-negative errno values.
+                    // If the status code is non-zero, content length
+                    // MUST to be set to zero.
+                    if (status == 0)
+                    {
+                        content = malloc(content_len + 1);
 
-			if (content != NULL)
-			{
-			    got = read(conn_socket,
-				    content,
-				    content_len);
+                        if (content != NULL)
+                        {
+                            got = read(conn_socket,
+                                    content,
+                                    content_len);
 
-			    if (got == sizeof content_len)
-			    {
-				content[content_len] = '\0';
-				uint8_t digest_len_net = 0;
+                            if (got == sizeof content_len)
+                            {
+                                content[content_len] = '\0';
+                                uint8_t digest_len_net = 0;
 
-				switch (digest_type)
-				{
-				    case rush_digest_type_sha1:
-					digest_len_net = 20;
-					break;
-				    case rush_digest_type_sha256:
-					digest_len_net = 32;
-					break;
-				    case rush_digest_type_blake2b:
-					digest_len_net = 64;
-					break;
-				    case rush_digest_type_none:
-					digest_len_net = 0;
-					break;
-				}
+                                switch (digest_type)
+                                {
+                                    case rush_digest_type_sha1:
+                                        digest_len_net = 20;
+                                        break;
+                                    case rush_digest_type_sha256:
+                                        digest_len_net = 32;
+                                        break;
+                                    case rush_digest_type_blake2b:
+                                        digest_len_net = 64;
+                                        break;
+                                    case rush_digest_type_none:
+                                        digest_len_net = 0;
+                                        break;
+                                }
 
-				uint8_t const digest_len = ntohs(digest_len_net);
-				char * digest = malloc(digest_len + 1);
+                                uint8_t const digest_len = ntohs(digest_len_net);
+                                char * digest = malloc(digest_len + 1);
 
-				if (digest != NULL)
-				{
-				    got = read(conn_socket,
-					    digest,
-					    digest_len);
+                                if (digest != NULL)
+                                {
+                                    got = read(conn_socket,
+                                            digest,
+                                            digest_len);
 
-				    if (got == digest_len)
-				    {
-					digest[digest_len] = '\0';
-				    }
-				    else if (got == -1)
-				    {
-					result = errno;
-					fprintf(stderr,
-						"Error reading digest of send_file message: %d\n",
-						result);
-				    }
-				    else
-				    {
-					fprintf(stderr,
-						"Not enough data available, skipping.\n");
-				    }
+                                    if (got == digest_len)
+                                    {
+                                        digest[digest_len] = '\0';
+                                    }
+                                    else if (got == -1)
+                                    {
+                                        result = errno;
+                                        fprintf(stderr,
+                                                "Error reading digest of send_file message: %d\n",
+                                                result);
+                                    }
+                                    else
+                                    {
+                                        fprintf(stderr,
+                                                "Not enough data available, skipping.\n");
+                                    }
 
-				    free(digest);
-				    digest = NULL;
-				}
-				else
-				{
-				    result = ENOMEM;
-				    fprintf(stderr,
-					    "Error allocating memory for digest of size %"PRIu16": %d\n",
-					    digest_len,
-					    result);
-				}
-			    }
-			    else if (got == -1)
-			    {
-				result = errno;
-				fprintf(stderr,
-					"Error reading content of send_file message: %d\n",
-					result);
-			    }
-			    else
-			    {
-				fprintf(stderr,
-					"Not enough data available, skiping.\n");
-			    }
+                                    free(digest);
+                                    digest = NULL;
+                                }
+                                else
+                                {
+                                    result = ENOMEM;
+                                    fprintf(stderr,
+                                            "Error allocating memory for digest of size %"PRIu16": %d\n",
+                                            digest_len,
+                                            result);
+                                }
+                            }
+                            else if (got == -1)
+                            {
+                                result = errno;
+                                fprintf(stderr,
+                                        "Error reading content of send_file message: %d\n",
+                                        result);
+                            }
+                            else
+                            {
+                                fprintf(stderr,
+                                        "Not enough data available, skiping.\n");
+                            }
 
-			    free(content);
-			    content = NULL;
-			}
-			else
-			{
-			    result = ENOMEM;
-			    fprintf(stderr,
-				    "Error rallocating memory for content of size %"PRIu64": %d\n",
-				    content_len,
-				    result);
-			}
-		    }
-		    else
-		    {
-			if (content_len != 0)
-			{
-			    fprintf(stderr,
-				    "Error in content length of send_file message, should be 0.\n");
-			}
-			else
-			{
-			    fprintf(stderr,
-				    "Error in send_file message: %d\n",
-				    status);
-			}
-		    }
-		}
-	    }
-	    else if (got == -1)
-	    {
-		result = errno;
-		fprintf(stderr,
-			"Error reading content length of send_file message: %d\n",
-			result);
-	    }
-	    else
-	    {
-		fprintf(stderr,
-			"Not enough data available, skipping.\n");
-	    }
-	}
-	else if (got == -1)
-	{
-	    result = errno;
-	    fprintf(stderr,
-		    "Error reading digest type of send_file message: %d\n",
-		    result);
-	}
-	else
-	{
-	    fprintf(stderr,
-		    "Not enough data available, skipping.\n");
-	}
+                            free(content);
+                            content = NULL;
+                        }
+                        else
+                        {
+                            result = ENOMEM;
+                            fprintf(stderr,
+                                    "Error rallocating memory for content of size %"PRIu64": %d\n",
+                                    content_len,
+                                    result);
+                        }
+                    }
+                    else
+                    {
+                        if (content_len != 0)
+                        {
+                            fprintf(stderr,
+                                    "Error in content length of send_file message, should be 0.\n");
+                        }
+                        else
+                        {
+                            fprintf(stderr,
+                                    "Error in send_file message: %d\n",
+                                    status);
+                        }
+                    }
+                }
+            }
+            else if (got == -1)
+            {
+                result = errno;
+                fprintf(stderr,
+                        "Error reading content length of send_file message: %d\n",
+                        result);
+            }
+            else
+            {
+                fprintf(stderr,
+                        "Not enough data available, skipping.\n");
+            }
+        }
+        else if (got == -1)
+        {
+            result = errno;
+            fprintf(stderr,
+                    "Error reading digest type of send_file message: %d\n",
+                    result);
+        }
+        else
+        {
+            fprintf(stderr,
+                    "Not enough data available, skipping.\n");
+        }
     }
     else if (got == -1)
     {
-	result = errno;
-	fprintf(stderr,
-		"Error reading status code of send_file message: %d\n",
-		result);
+        result = errno;
+        fprintf(stderr,
+                "Error reading status code of send_file message: %d\n",
+                result);
     }
     else
     {
-	fprintf(stderr,
-		"Not enough data available, skipping.\n");
+        fprintf(stderr,
+                "Not enough data available, skipping.\n");
     }
 
     FILE * file = NULL;
@@ -376,7 +400,7 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
 
     if (file != NULL)
     {
-	fwrite(content, content_len, 1, file);
+        fwrite(content, content_len, 1, file);
     }
     fclose(file);
 }
@@ -406,17 +430,17 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
 
             if (got == sizeof type)
             {
-		if (type == rush_message_type_new_file)
-		{
-		    // TYPE == 1
-		    // name_len
-		    // content_len
-		    // digest_type
-		    // name
-		    // digest
-		    // FIXME
-		}
-		else if (type == rush_message_type_list_files)
+                if (type == rush_message_type_new_file)
+                {
+                    // TYPE == 1
+                    // name_len
+                    // content_len
+                    // digest_type
+                    // name
+                    // digest
+                    // FIXME
+                }
+                else if (type == rush_message_type_list_files)
                 {
                     // TYPE == 2
                     // UNICAST RQST LIST OF FILES
@@ -494,8 +518,8 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 }
                 else if (type == rush_message_type_get_file_response)
                 {
-		    // TYPE == 5
-		    BE_FE_send_content_message(config, conn_socket);
+                    // TYPE == 5
+                    BE_FE_send_content_message(config, conn_socket);
                 }
                 else if (type == rush_message_type_discover)
                 {
@@ -684,12 +708,61 @@ static int rush_backend_listen_on_unicast(char const * const unicast_bind_addr_s
     return result;
 }
 
+void rush_backend_bind_multicast_socket(int * const multicast_socket)
+{
+    struct sockaddr_in localSock = (struct sockaddr_in) { 0 };
+    struct ip_mreq group;
+
+    *multicast_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (*multicast_socket < 0)
+        perror("Opening datagram socket error");
+    int reuse = 1;
+    if(setsockopt(*multicast_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0)
+        perror("Setting SO_REUSEADDR error");
+    memset((char *) &localSock, 0, sizeof(localSock));
+    localSock.sin_family = AF_INET;
+    localSock.sin_port = htons(BE_MCAST_PORT);
+    localSock.sin_addr.s_addr = INADDR_ANY;
+
+    if(bind(*multicast_socket, (struct sockaddr*)&localSock, sizeof(localSock)))
+        perror("Binding datagram socket error");
+
+    group.imr_multiaddr.s_addr = inet_addr(SAN_GROUP);
+    group.imr_interface.s_addr = inet_addr(LOCAL_IFACE);
+    if(setsockopt(*multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
+        perror("Adding multicast group error");
+}
+
+void rush_backend_handle_multicast_socket_event(int * const multicast_socket)
+{
+    char databuf[1024];
+    int datalen = 0;
+    datalen = sizeof(databuf);
+    if(read(*multicast_socket, databuf, datalen) < 0)
+    {
+        perror("Reading datagram message error");
+        close(*multicast_socket);
+        exit(1);
+    }
+    else
+    {
+        printf("Reading datagram message...OK.\n");
+        printf("The message from multicast server is: \"%s\"\n", databuf);
+    }
+    close(*multicast_socket);
+
+}
+
+
 int main(void)
 {
     rush_backend_config config = (rush_backend_config) { 0 };
     int unicast_socket = -1;
     int inotify_fd = -1;
     int dir_inotify_fd = -1;
+
+    int multicast_socket = -1;
+    rush_backend_bind_multicast_socket(&multicast_socket);
 
     config.watched_dir = "/tmp";
     config.watched_dir_len = strlen(config.watched_dir);
@@ -733,63 +806,79 @@ int main(void)
                             EPOLL_CTL_ADD,
                             unicast_socket,
                             &unicast_socket_event);
-
                     if (result == 0)
                     {
-                        while (result == 0)
+                        struct epoll_event multicast_socket_event = (struct epoll_event) { 0 };
+
+                        multicast_socket_event.events = EPOLLIN;
+                        multicast_socket_event.data.fd = multicast_socket;
+
+                        result = epoll_ctl(polling_fd,
+                                EPOLL_CTL_ADD,
+                                multicast_socket,
+                                &multicast_socket_event);
+                        if (result == 0)
                         {
-                            struct epoll_event events = (struct epoll_event) { 0 };
-
-                            result = epoll_wait(polling_fd,
-                                    &events,
-                                    1,
-                                    -1);
-
-                            if (result > 0)
+                            while (result == 0)
                             {
-                                result = 0;
+                                struct epoll_event events = (struct epoll_event) { 0 };
 
-                                /* process event */
-                                fprintf(stdout,
-                                        "Got event on %d\n",
-                                        events.data.fd);
-
-                                if (events.data.fd == inotify_fd)
+                                result = epoll_wait(polling_fd,
+                                        &events,
+                                        1,
+                                        -1);
+                                if (result > 0)
                                 {
+                                    result = 0;
+
+                                    /* process event */
                                     fprintf(stdout,
-                                            "Got inotiy event!\n");
-                                    rush_backend_handle_dir_event(&config,
-                                            inotify_fd);
+                                            "Got event on %d\n",
+                                            events.data.fd);
+
+                                    if (events.data.fd == inotify_fd)
+                                    {
+                                        fprintf(stdout,
+                                                "Got inotiy event!\n");
+                                        rush_backend_handle_dir_event(&config,
+                                                inotify_fd);
+                                    }
+                                    else if (events.data.fd == unicast_socket)
+                                    {
+                                        fprintf(stdout,
+                                                "Got socket event!\n");
+                                        rush_backend_handle_socket_event(&config,
+                                                unicast_socket);
+                                    }
+                                    else if (events.data.fd == multicast_socket)
+                                    {
+                                        fprintf(stdout,
+                                                "Got multicast_socket event!\n");
+                                        rush_backend_handle_multicast_socket_event(&multicast_socket);
+                                    }
                                 }
-                                else if (events.data.fd == unicast_socket)
+                                else if (result == 0)
                                 {
+                                    /* handle timeout */
                                     fprintf(stdout,
-                                            "Got socket event!\n");
-                                    rush_backend_handle_socket_event(&config,
-                                            unicast_socket);
+                                            "Got timeout!\n");
                                 }
-                            }
-                            else if (result == 0)
-                            {
-                                /* handle timeout */
-                                fprintf(stdout,
-                                        "Got timeout!\n");
-                            }
-                            else
-                            {
-                                result = errno;
-                                fprintf(stderr,
-                                        "Error in epoll_wait(): %d\n",
-                                        result);
+                                else
+                                {
+                                    result = errno;
+                                    fprintf(stderr,
+                                            "Error in epoll_wait(): %d\n",
+                                            result);
+                                }
                             }
                         }
-                    }
-                    else
-                    {
-                        result = errno;
-                        fprintf(stderr,
-                                "Error in epoll_ctl(): %d\n",
-                                result);
+                        else
+                        {
+                            result = errno;
+                            fprintf(stderr,
+                                    "Error in epoll_ctl(): %d\n",
+                                    result);
+                        }
                     }
                 }
                 else
