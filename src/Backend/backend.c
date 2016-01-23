@@ -276,13 +276,13 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
                                 switch (digest_type)
                                 {
                                     case rush_digest_type_sha1:
-                                        digest_len = 20;
+                                        digest_len = RUSH_DIGEST_SHA1_SIZE;
                                         break;
                                     case rush_digest_type_sha256:
-                                        digest_len = 32;
+                                        digest_len = RUSH_DIGEST_SHA256_SIZE;
                                         break;
                                     case rush_digest_type_blake2b:
-                                        digest_len = 64;
+                                        digest_len = RUSH_DIGEST_BLAKE2B_SIZE;
                                         break;
                                     case rush_digest_type_none:
                                         digest_len = 0;
