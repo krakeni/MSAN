@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
+#include <math.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <stdbool.h>
@@ -208,12 +209,12 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
     // UNICAST MSG SEND CONTENT OF A FILE
     // status must not be negative
     uint8_t status = 0;
-    uint64_t content_len = 0;
-    char * content = NULL;
 
     got = read(conn_socket,
             &status,
             sizeof status);
+
+    printf("Status: %" PRIu8 "\n", status);
 
     if (got == sizeof status)
     {
@@ -223,20 +224,30 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
         got = read(conn_socket,
                 &digest_type,
                 sizeof digest_type);
+	printf("Digest type: %" PRIu8 "\n", digest_type);
 
         if (got == sizeof digest_type)
         {
             // content_len
-            uint64_t content_len_net = 0;
+            long long content_len_net = 0;
 
             got = read(conn_socket,
                     &content_len_net,
                     sizeof content_len_net);
+	    printf("Content len net: %llu\n", content_len_net);
+	    printf("sizeof Content len net: %lu\n", sizeof content_len_net);
+	    printf("got: %zu\n", got);
 
             if (got == sizeof content_len_net)
-            {
-                content_len = ntohs(content_len_net);
-                if (content_len == 0 && digest_type != rush_digest_type_none)
+	    {
+		uint32_t content_len_net_low = content_len_net;
+		uint32_t content_len_net_high = content_len_net >> 32;
+		uint32_t low_32 = ntohl(content_len_net_low);
+		uint32_t high_32 = ntohl(content_len_net_high);
+
+		uint64_t content_len = (high_32 << 32) + low_32;
+		printf("Content len: %" PRIu64 "\n", content_len);
+                if (content_len_net == 0 && digest_type != rush_digest_type_none)
                 {
                     fprintf(stderr,
                             "Error in digest type of send_file message, should be None.\n");
@@ -248,48 +259,59 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
                     // MUST to be set to zero.
                     if (status == 0)
                     {
-                        content = malloc(content_len + 1);
+                        char * content = malloc(content_len + 1);
 
                         if (content != NULL)
                         {
                             got = read(conn_socket,
                                     content,
                                     content_len);
+			    printf("Content: %s\n", content);
 
-                            if (got == sizeof content_len)
+                            if (got == (int)content_len)
                             {
                                 content[content_len] = '\0';
-                                uint8_t digest_len_net = 0;
+                                uint8_t digest_len = 0;
 
                                 switch (digest_type)
                                 {
                                     case rush_digest_type_sha1:
-                                        digest_len_net = 20;
+                                        digest_len = 20;
                                         break;
                                     case rush_digest_type_sha256:
-                                        digest_len_net = 32;
+                                        digest_len = 32;
                                         break;
                                     case rush_digest_type_blake2b:
-                                        digest_len_net = 64;
+                                        digest_len = 64;
                                         break;
                                     case rush_digest_type_none:
-                                        digest_len_net = 0;
+                                        digest_len = 0;
                                         break;
                                 }
 
-                                uint8_t const digest_len = ntohs(digest_len_net);
-                                char * digest = malloc(digest_len + 1);
+                                char * digest = malloc((digest_len + 1) * sizeof (uint8_t));
 
                                 if (digest != NULL)
                                 {
                                     got = read(conn_socket,
                                             digest,
                                             digest_len);
+				    printf("Digest len: %" PRIu8 "\n", digest_len);
+				    printf("Got: %zu\n", got);
+				    printf("Digest: %s\n", digest);
 
                                     if (got == digest_len)
-                                    {
-                                        digest[digest_len] = '\0';
-                                    }
+				    {
+					digest[digest_len] = '\0';
+					FILE * file = NULL;
+					file = fopen("test.txt", "w+");
+
+					if (file != NULL)
+					{
+					    fwrite(content, content_len, 1, file);
+					}
+					fclose(file);
+				    }
                                     else if (got == -1)
                                     {
                                         result = errno;
@@ -300,7 +322,7 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
                                     else
                                     {
                                         fprintf(stderr,
-                                                "Not enough data available, skipping.\n");
+                                                "Not enough data available for digest, skipping.\n");
                                     }
 
                                     free(digest);
@@ -325,7 +347,7 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
                             else
                             {
                                 fprintf(stderr,
-                                        "Not enough data available, skiping.\n");
+                                        "Not enough data available for content, skiping.\n");
                             }
 
                             free(content);
@@ -366,7 +388,7 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
             else
             {
                 fprintf(stderr,
-                        "Not enough data available, skipping.\n");
+                        "Not enough data available for content len, skipping.\n");
             }
         }
         else if (got == -1)
@@ -379,7 +401,7 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
         else
         {
             fprintf(stderr,
-                    "Not enough data available, skipping.\n");
+                    "Not enough data available for digest type, skipping.\n");
         }
     }
     else if (got == -1)
@@ -392,17 +414,9 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
     else
     {
         fprintf(stderr,
-                "Not enough data available, skipping.\n");
+                "Not enough data available for status code, skipping.\n");
     }
 
-    FILE * file = NULL;
-    file = fopen("test.txt", "w+");
-
-    if (file != NULL)
-    {
-        fwrite(content, content_len, 1, file);
-    }
-    fclose(file);
 }
 
 static int rush_backend_handle_new_connection(rush_backend_config const * const config,
@@ -427,6 +441,7 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
             got = read(conn_socket,
                     &type,
                     sizeof type);
+	    printf("Type: %" PRIu8 "\n", type);
 
             if (got == sizeof type)
             {
