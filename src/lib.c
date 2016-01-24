@@ -170,6 +170,18 @@ void send_mcast_disp_new_file(uint16_t port, const char* mcast_group, char *file
     uint16_t namelen = strlen(filename);
     memcpy(msg + 2, &namelen, 2);
     memcpy(msg + 4, filename, namelen);
-    send_mcast_msg(&msg, 2, port, mcast_group);    
+    send_mcast_msg(&msg, msglen, port, mcast_group);
 }
 
+void send_ucast_req_content_file(char *filename, uint16_t port, char *address)
+{
+    uint32_t msglen = 4;
+    msglen += strlen(filename);
+    char msg[msglen];
+    msg[0] = 1;
+    msg[1] = 4;
+    uint16_t namelen = strlen(filename);
+    memcpy(msg + 2, &namelen, 2);
+    memcpy(msg + 4, filename, namelen);
+    send_ucast_msg(address, port, msg, msglen);
+}
