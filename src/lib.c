@@ -95,7 +95,7 @@ struct BE_file_info_list *BE_file_info_list_create_node(BE_file_info element)
   Infos est une liste de BE_file_info qui contiennent les champs, pour chaque fichier,
   qui permettront l'ajout dans un message type 3
 */
-void send_mcast_list_all_files(int nb_files, struct BE_file_info_list *infos, int port, char *address)
+void send_ucast_list_all_files(int nb_files, struct BE_file_info_list *infos, int port, char *address)
 {
     //La taille totale de notre message donc de notre buffer (en octets)
     long long total_size = 2 + 4;
@@ -150,3 +150,13 @@ void send_mcast_list_all_files(int nb_files, struct BE_file_info_list *infos, in
     	    free(tmp);
     	});
 }
+
+
+void send_mcast_alive(uint16_t port, const char* mcast_group)
+{
+  char msg[2];
+  msg[0] = 1;
+  msg[1] = 7;
+  send_mcast_msg(&msg, 2, port, mcast_group);
+}
+
