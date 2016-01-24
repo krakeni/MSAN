@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 #include "../include/rush.h"
-
+#include "../include/lib.h"
 typedef struct
 {
     char const * unicast_bind_addr_str;
