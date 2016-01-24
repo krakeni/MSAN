@@ -9,6 +9,7 @@
 #include <math.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
+#include <openssl/sha.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>

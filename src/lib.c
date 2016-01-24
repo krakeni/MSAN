@@ -1,5 +1,5 @@
 #include "../include/lib.h"
-
+/*
 void send_mcast_msg(char *databuf, int datalen, uint16_t port, const char* mcast_group)
 {
     struct in_addr Local_interface = (struct in_addr) { 0 };
@@ -31,6 +31,48 @@ void send_mcast_discover(uint16_t port, const char* mcast_group)
   msg[1] = 8;
   send_mcast_msg(&msg, 2, port, mcast_group);
 }
+*/
+
+void hash_string_sha256(uint8_t hash[SHA256_DIGEST_LENGTH], char output[256])
+{
+    int i = 0;
+
+    for (i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    {
+	sprintf(output + (i * 2), "%02x", hash[i]);
+    }
+
+    output[255] = 0;
+}
+
+void get_hash_sha256(char* path, char output[256])
+{
+    FILE* file = fopen(path, "rb");
+    if (file != NULL)
+    {
+
+	uint8_t hash[SHA256_DIGEST_LENGTH];
+	SHA256_CTX sha256;
+	SHA256_Init(&sha256);
+	const int buffer_size = 32768;
+	char* buffer = malloc(buffer_size);
+	int read = 0;
+
+	if (buffer != NULL)
+	{
+	    while ((read = fread(buffer, 1, buffer_size, file)))
+	    {
+		SHA256_Update(&sha256, buffer, read);
+	    }
+	    SHA256_Final(hash, &sha256);
+
+	    hash_string_sha256(hash, output);
+
+	    fclose(file);
+	    free(buffer);
+	}
+    }
+}
 
 /* Type 1 Params:
  * - port
@@ -45,8 +87,14 @@ void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
     // static_size = version_sz + type_sz + name_len_sz + content_len_sz + digest_type_sz;
     // static_size = 1 + 1 + 2 + 8 + 1;
     size_t static_size = 13;
-    size_t digest_len = rush_digest_type_to_size(digest_type);
-    digest_len = 0;
+
+    size_t digest_len = rush_digest_type_to_size(digest_type) * 8;
+    char* digest = malloc((digest_len + 1) * sizeof (uint8_t));
+
+    if (digest_type == 2)
+    	get_hash_sha256(path, digest);
+
+    digest_len = strlen(digest);
 
     const char delim[2] = "/";
     char* token = malloc(strlen(path));
@@ -66,25 +114,31 @@ void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
 	    filename = token;
     }
 
+    // DEBUG
     printf("Version: 1\nType: 1\n");
 
     uint16_t name_len = strlen(filename); 
 
+    // DEBUG
     printf("Filename size: %" PRIu16 "\n", name_len);
 
-    FILE* file = fopen(path, "r");
+    uint64_t content_len = 0;
+    FILE* file = fopen(path, "rb");
     if (file != NULL)
     {
 	fseek(file, 0, SEEK_END);
+	content_len = ftell(file);
     }
-    uint64_t content_len = ftell(file);
 
+    // DEBUG
     printf("File length: %" PRIu64 "\n", content_len);
     printf("Digest type: %d\n", digest_type);
     printf("Filename: %s\n", filename);
 
     message_length = static_size + name_len + digest_len;
-    printf("Message length: %" PRIu64 "\n", message_length);
+    // DEBUG
+    printf("Digest: %s\n", digest);
+
     uint8_t message[message_length];
 
     message[0] = 1; // version
@@ -93,26 +147,22 @@ void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
     message[3] = name_len;
     
     int shift = 64;
-    for (int i = 4; i < 12; i++)
+    for (size_t i = 4; i < static_size - 1; i++)
     {
 	shift -= 8;
 	message[i] = content_len >> shift;
     }
 
-    message[12] = digest_type;
+    message[static_size - 1] = digest_type;    
 
     memcpy(message + static_size, filename, name_len);
+    memcpy(message + static_size + name_len, digest, digest_len);
 
-    // Digest
-    message[static_size + name_len] = 0;
-
-    for (int i = 0; i < message_length; i++)
-    {
-	printf("message[%d] = %d\n", i, message[i]);
-    }
+    message[static_size + name_len + digest_len] = 0;
 
     fclose(file);
     free(token);
+}
 
 int send_ucast_msg(char *address, int port, uint8_t *message, long long message_length)
 {
@@ -125,7 +175,6 @@ int send_ucast_msg(char *address, int port, uint8_t *message, long long message_
     {
         printf("Could not create socket");
     }
-
     /* Put the proxy address there */
     server.sin_addr.s_addr = inet_addr(address);
     server.sin_family = AF_INET;
