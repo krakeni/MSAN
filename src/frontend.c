@@ -6,7 +6,6 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
-#include <math.h>
 #include <netdb.h>
 #include <netinet/tcp.h>
 #include <stdbool.h>
@@ -18,7 +17,8 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "../rush.h"
+#include "../include/rush.h"
+
 
 typedef struct
 {
@@ -27,9 +27,9 @@ typedef struct
     char const * watched_dir;
     size_t watched_dir_len;
 
-} rush_backend_config;
+} rush_frontend_config;
 
-void rush_backend_send_mcast_msg_san(char *databuf, int datalen)
+void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
 {
     struct in_addr Local_interface = (struct in_addr) { 0 };
     struct sockaddr_in mcast_sock = (struct sockaddr_in) { 0 };
@@ -37,8 +37,8 @@ void rush_backend_send_mcast_msg_san(char *databuf, int datalen)
     int msocket = socket(AF_INET, SOCK_DGRAM, 0);
     memset((char *) &mcast_sock, 0, sizeof(mcast_sock));
     mcast_sock.sin_family = AF_INET;
-    mcast_sock.sin_addr.s_addr = inet_addr(FRONTEND_GROUP);
-    mcast_sock.sin_port = htons(FE_MCAST_PORT);
+    mcast_sock.sin_addr.s_addr = inet_addr(SAN_GROUP);
+    mcast_sock.sin_port = htons(BE_MCAST_PORT);
 
     Local_interface.s_addr = inet_addr(LOCAL_IFACE);
     if(setsockopt(msocket, IPPROTO_IP, IP_MULTICAST_IF, (char *)&Local_interface, sizeof(Local_interface)) < 0)
@@ -52,8 +52,7 @@ void rush_backend_send_mcast_msg_san(char *databuf, int datalen)
     }
 }
 
-
-static int rush_backend_watch_dir(char const * const dir,
+static int rush_frontend_watch_dir(char const * const dir,
         int * const inotify_fd,
         int * const dir_inotify_fd)
 {
@@ -101,7 +100,7 @@ static int rush_backend_watch_dir(char const * const dir,
     return result;
 }
 
-static int rush_backend_handle_new_file(rush_backend_config const * const config,
+static int rush_frontend_handle_new_file(rush_frontend_config const * const config,
         char const * const filename)
 {
     int result = 0;
@@ -140,7 +139,7 @@ static int rush_backend_handle_new_file(rush_backend_config const * const config
     return result;
 }
 
-static void rush_backend_handle_dir_event(rush_backend_config const * const config,
+static void rush_frontend_handle_dir_event(rush_frontend_config const * const config,
         int const inotify_fd)
 {
     static size_t const buffer_size = sizeof(struct inotify_event) + NAME_MAX + 1;
@@ -169,7 +168,7 @@ static void rush_backend_handle_dir_event(rush_backend_config const * const conf
                 {
                     char const * const filename = event->name;
 
-                    rush_backend_handle_new_file(config,
+                    rush_frontend_handle_new_file(config,
                             filename);
                 }
 
@@ -198,228 +197,50 @@ static void rush_backend_handle_dir_event(rush_backend_config const * const conf
     while (finished == false);
 }
 
-static void BE_FE_send_content_message(rush_backend_config const * const config,
-        int const conn_socket)
+static int BE_advertise_file_handle(/*rush_frontend_config const * const config,*/
+				       int const conn_socket)
 {
-    int result = EINVAL;
-    ssize_t got = 0;
-    assert(config != NULL);
+    int result = 0;
+    uint16_t name_len = 0;
 
-    // TYPE == 5
-    // UNICAST MSG SEND CONTENT OF A FILE
-    // status must not be negative
-    uint8_t status = 0;
-
-    got = read(conn_socket,
-            &status,
-            sizeof status);
-
-    printf("Status: %" PRIu8 "\n", status);
-
-    if (got == sizeof status)
+    int got = read(conn_socket,
+            &name_len,
+            sizeof name_len);
+    if (got == sizeof name_len)
     {
-        // digest_type
-        uint8_t digest_type = rush_digest_type_none;
-
-        got = read(conn_socket,
-                &digest_type,
-                sizeof digest_type);
-	printf("Digest type: %" PRIu8 "\n", digest_type);
-
-        if (got == sizeof digest_type)
-        {
-            // content_len
-            long long content_len_net = 0;
-
-            got = read(conn_socket,
-                    &content_len_net,
-                    sizeof content_len_net);
-	    printf("Content len net: %llu\n", content_len_net);
-	    printf("sizeof Content len net: %lu\n", sizeof content_len_net);
-	    printf("got: %zu\n", got);
-
-            if (got == sizeof content_len_net)
-	    {
-		uint32_t content_len_net_low = content_len_net;
-		uint32_t content_len_net_high = content_len_net >> 32;
-		uint32_t low_32 = ntohl(content_len_net_low);
-		uint32_t high_32 = ntohl(content_len_net_high);
-
-		uint64_t content_len = (high_32 << 32) + low_32;
-		printf("Content len: %" PRIu64 "\n", content_len);
-                if (content_len_net == 0 && digest_type != rush_digest_type_none)
-                {
-                    fprintf(stderr,
-                            "Error in digest type of send_file message, should be None.\n");
-                }			    
-                else
-                {
-                    // Status code matches non-negative errno values.
-                    // If the status code is non-zero, content length
-                    // MUST to be set to zero.
-                    if (status == 0)
-                    {
-                        char * content = malloc(content_len + 1);
-
-                        if (content != NULL)
-                        {
-                            got = read(conn_socket,
-                                    content,
-                                    content_len);
-			    printf("Content: %s\n", content);
-
-                            if (got == (int)content_len)
-                            {
-                                content[content_len] = '\0';
-                                uint8_t digest_len = 0;
-
-                                switch (digest_type)
-                                {
-                                    case rush_digest_type_sha1:
-                                        digest_len = RUSH_DIGEST_SHA1_SIZE;
-                                        break;
-                                    case rush_digest_type_sha256:
-                                        digest_len = RUSH_DIGEST_SHA256_SIZE;
-                                        break;
-                                    case rush_digest_type_blake2b:
-                                        digest_len = RUSH_DIGEST_BLAKE2B_SIZE;
-                                        break;
-                                    case rush_digest_type_none:
-                                        digest_len = 0;
-                                        break;
-                                }
-
-                                char * digest = malloc((digest_len + 1) * sizeof (uint8_t));
-
-                                if (digest != NULL)
-                                {
-                                    got = read(conn_socket,
-                                            digest,
-                                            digest_len);
-				    printf("Digest len: %" PRIu8 "\n", digest_len);
-				    printf("Got: %zu\n", got);
-				    printf("Digest: %s\n", digest);
-
-                                    if (got == digest_len)
-				    {
-					digest[digest_len] = '\0';
-					FILE * file = NULL;
-					file = fopen("test.txt", "w+");
-
-					if (file != NULL)
-					{
-					    fwrite(content, content_len, 1, file);
-					}
-					fclose(file);
-				    }
-                                    else if (got == -1)
-                                    {
-                                        result = errno;
-                                        fprintf(stderr,
-                                                "Error reading digest of send_file message: %d\n",
-                                                result);
-                                    }
-                                    else
-                                    {
-                                        fprintf(stderr,
-                                                "Not enough data available for digest, skipping.\n");
-                                    }
-
-                                    free(digest);
-                                    digest = NULL;
-                                }
-                                else
-                                {
-                                    result = ENOMEM;
-                                    fprintf(stderr,
-                                            "Error allocating memory for digest of size %"PRIu16": %d\n",
-                                            digest_len,
-                                            result);
-                                }
-                            }
-                            else if (got == -1)
-                            {
-                                result = errno;
-                                fprintf(stderr,
-                                        "Error reading content of send_file message: %d\n",
-                                        result);
-                            }
-                            else
-                            {
-                                fprintf(stderr,
-                                        "Not enough data available for content, skiping.\n");
-                            }
-
-                            free(content);
-                            content = NULL;
-                        }
-                        else
-                        {
-                            result = ENOMEM;
-                            fprintf(stderr,
-                                    "Error rallocating memory for content of size %"PRIu64": %d\n",
-                                    content_len,
-                                    result);
-                        }
-                    }
-                    else
-                    {
-                        if (content_len != 0)
-                        {
-                            fprintf(stderr,
-                                    "Error in content length of send_file message, should be 0.\n");
-                        }
-                        else
-                        {
-                            fprintf(stderr,
-                                    "Error in send_file message: %d\n",
-                                    status);
-                        }
-                    }
-                }
-            }
-            else if (got == -1)
-            {
-                result = errno;
-                fprintf(stderr,
-                        "Error reading content length of send_file message: %d\n",
-                        result);
-            }
-            else
-            {
-                fprintf(stderr,
-                        "Not enough data available for content len, skipping.\n");
-            }
-        }
-        else if (got == -1)
-        {
-            result = errno;
-            fprintf(stderr,
-                    "Error reading digest type of send_file message: %d\n",
-                    result);
-        }
-        else
-        {
-            fprintf(stderr,
-                    "Not enough data available for digest type, skipping.\n");
-        }
+	char name[name_len];
+	got = read(conn_socket,
+		   &name,
+		   sizeof(name));
+	if (got == name_len)
+	{
+	    //Il faut faire quoi ?
+	}
+	else
+	{
+	    result = errno;
+	    fprintf(stderr, "Error, the name's lengh is not as long as specified");
+	}
     }
-    else if (got == -1)
-    {
-        result = errno;
-        fprintf(stderr,
-                "Error reading status code of send_file message: %d\n",
-                result);
-    }
-    else
-    {
-        fprintf(stderr,
-                "Not enough data available for status code, skipping.\n");
-    }
-
+    return result;
 }
 
-static int rush_backend_handle_new_connection(rush_backend_config const * const config,
+static int BE_alive_message(/*rush_frontend_config const * const config,*/
+				       int const conn_socket)
+{
+    int result = 0;
+    //On va récupérer l'IP de la machine qui a répondu et lui uploader le fichier
+    struct sockaddr_in addr;
+    socklen_t addr_size = sizeof(struct sockaddr_in);
+    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
+    char clientip[20];
+    strcpy(clientip, inet_ntoa(addr.sin_addr));
+    printf("l'ip du Back End qui a répondu alive est : %s\n", clientip);
+
+    return result;
+}
+
+static int rush_frontend_handle_new_connection(rush_frontend_config const * const config,
         int const conn_socket)
 {
     int result = EINVAL;
@@ -441,26 +262,21 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
             got = read(conn_socket,
                     &type,
                     sizeof type);
-	    printf("Type: %" PRIu8 "\n", type);
 
             if (got == sizeof type)
             {
-                if (type == rush_message_type_new_file)
-                {
-                    // TYPE == 1
-                    // name_len
-                    // content_len
-                    // digest_type
-                    // name
-                    // digest
-                    // FIXME
+		if (type == rush_message_type_list_files)
+		{
+		    // TYPE == 2
+		    // UNICAST RQST LIST OF FILES
+		    // FIXME
                 }
-                else if (type == rush_message_type_list_files)
-                {
-                    // TYPE == 2
-                    // UNICAST RQST LIST OF FILES
-                    // FIXME
-                }
+		else if (type == rush_message_type_list_files_response)
+		{
+		    // TYPE == 3
+		    // Back-end unicast message sending the lists of all files
+		    //
+		}
                 else if (type == rush_message_type_get_file)
                 {
                     // TYPE == 4
@@ -534,12 +350,25 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 else if (type == rush_message_type_get_file_response)
                 {
                     // TYPE == 5
-                    BE_FE_send_content_message(config, conn_socket);
+		    // UNICAST MSG SEND CONTENT OF A FILE
+		    // status must not be negative
+		    // digest_type
+		    // content_len
+		    // content
+		    // digest
+		    // FIXME
                 }
-                else if (type == rush_message_type_discover)
-                {
-                    // TYPE == 8
-                }
+		else if (type == rush_message_type_file_available_here)
+		{
+		    // TYPE = 6
+		    // Back-end multicast message advertising the disponibility of a file
+
+		}
+		else if (type == rush_message_type_alive)
+		{
+		    // TYPE = 7
+		    // Back-end alive multicast message
+		}
                 else
                 {
                     fprintf(stderr,
@@ -583,7 +412,7 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
     return result;
 }
 
-static int rush_backend_handle_socket_event(rush_backend_config const * const config,
+static int rush_frontend_handle_socket_event(rush_frontend_config const * const config,
         int const unicast_socket)
 {
     int result = 0;
@@ -601,7 +430,7 @@ static int rush_backend_handle_socket_event(rush_backend_config const * const co
 
     if (conn_socket >= 0)
     {
-        result = rush_backend_handle_new_connection(config,
+        result = rush_frontend_handle_new_connection(config,
                 conn_socket);
 
         close(conn_socket);
@@ -618,7 +447,7 @@ static int rush_backend_handle_socket_event(rush_backend_config const * const co
     return result;
 }
 
-static int rush_backend_listen_on_unicast(char const * const unicast_bind_addr_str,
+static int rush_frontend_listen_on_unicast(char const * const unicast_bind_addr_str,
         char const * const unicast_bind_port_str,
         int * const unicast_socket)
 {
@@ -723,7 +552,7 @@ static int rush_backend_listen_on_unicast(char const * const unicast_bind_addr_s
     return result;
 }
 
-void rush_backend_bind_multicast_socket(int * const multicast_socket)
+void rush_frontend_bind_multicast_socket(int * const multicast_socket)
 {
     struct sockaddr_in localSock = (struct sockaddr_in) { 0 };
     struct ip_mreq group;
@@ -736,19 +565,19 @@ void rush_backend_bind_multicast_socket(int * const multicast_socket)
         perror("Setting SO_REUSEADDR error");
     memset((char *) &localSock, 0, sizeof(localSock));
     localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(BE_MCAST_PORT);
+    localSock.sin_port = htons(FE_MCAST_PORT);
     localSock.sin_addr.s_addr = INADDR_ANY;
 
     if(bind(*multicast_socket, (struct sockaddr*)&localSock, sizeof(localSock)))
         perror("Binding datagram socket error");
 
-    group.imr_multiaddr.s_addr = inet_addr(SAN_GROUP);
+    group.imr_multiaddr.s_addr = inet_addr(FRONTEND_GROUP);
     group.imr_interface.s_addr = inet_addr(LOCAL_IFACE);
     if(setsockopt(*multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
         perror("Adding multicast group error");
 }
 
-void rush_backend_handle_multicast_socket_event(int * const multicast_socket)
+void rush_frontend_handle_multicast_socket_event(int * const multicast_socket)
 {
     char databuf[1024];
     int datalen = 0;
@@ -768,35 +597,28 @@ void rush_backend_handle_multicast_socket_event(int * const multicast_socket)
 
 }
 
-
 int main(void)
 {
-    rush_backend_config config = (rush_backend_config) { 0 };
+    rush_frontend_config config = (rush_frontend_config) { 0 };
     int unicast_socket = -1;
     int inotify_fd = -1;
     int dir_inotify_fd = -1;
 
     int multicast_socket = -1;
-    rush_backend_bind_multicast_socket(&multicast_socket);
-
-    /* FOR TEST PURPOSE
-    char databuf[1024] = "CLAUTOUR HANDICAP INTERNATIONAL";
-    int datalen = 1024;
-    rush_backend_send_mcast_msg_san(databuf, datalen);
-    */
+    rush_frontend_bind_multicast_socket(&multicast_socket);
 
     config.watched_dir = "/tmp";
     config.watched_dir_len = strlen(config.watched_dir);
     config.unicast_bind_addr_str = "::";
     config.unicast_bind_port_str = "4242";
 
-    int result = rush_backend_watch_dir(config.watched_dir,
+    int result = rush_frontend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
 
     if (result == 0)
     {
-        result = rush_backend_listen_on_unicast(config.unicast_bind_addr_str,
+        result = rush_frontend_listen_on_unicast(config.unicast_bind_addr_str,
                 config.unicast_bind_port_str,
                 &unicast_socket);
 
@@ -861,21 +683,21 @@ int main(void)
                                     {
                                         fprintf(stdout,
                                                 "Got inotiy event!\n");
-                                        rush_backend_handle_dir_event(&config,
+                                        rush_frontend_handle_dir_event(&config,
                                                 inotify_fd);
                                     }
                                     else if (events.data.fd == unicast_socket)
                                     {
                                         fprintf(stdout,
                                                 "Got socket event!\n");
-                                        rush_backend_handle_socket_event(&config,
+                                        rush_frontend_handle_socket_event(&config,
                                                 unicast_socket);
                                     }
                                     else if (events.data.fd == multicast_socket)
                                     {
                                         fprintf(stdout,
                                                 "Got multicast_socket event!\n");
-                                        rush_backend_handle_multicast_socket_event(&multicast_socket);
+                                        rush_frontend_handle_multicast_socket_event(&multicast_socket);
                                     }
                                 }
                                 else if (result == 0)
@@ -927,7 +749,7 @@ int main(void)
         else
         {
             fprintf(stderr,
-                    "Error in rush_backend_listen_on_unicast(): %d\n",
+                    "Error in rush_frontend_listen_on_unicast(): %d\n",
                     result);
         }
 
@@ -939,7 +761,7 @@ int main(void)
     else
     {
         fprintf(stderr,
-                "Error in rush_backend_watch_dir(): %d\n",
+                "Error in rush_frontend_watch_dir(): %d\n",
                 result);
     }
 
