@@ -29,3 +29,37 @@ void send_mcast_discover(uint16_t port, const char* mcast_group)
   char msg[2];
   send_mcast_msg(&msg, 2, port, mcast_group);
 }
+
+int send_ucast_msg(char *address, int port, int socket_desc, uint8_t *message, long long message_length)
+{
+
+    int socket_desc;
+    struct sockaddr_in server;
+     
+    //Create socket
+    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+    if (socket_desc == -1)
+    {
+        printf("Could not create socket");
+    }
+         
+    /* Put the proxy address there */
+    server.sin_addr.s_addr = inet_addr(address);
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+ 
+    //Connect to remote server
+    if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
+    {
+        puts("connect error");
+        return 1;
+    }
+     
+    puts("Connected\n");
+    if( send(socket_desc , message , message_length, 0) < 0)
+    {
+        puts("Send failed");
+        return 1;
+    }
+    return 0;
+}

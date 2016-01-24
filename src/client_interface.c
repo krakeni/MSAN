@@ -11,19 +11,11 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <math.h>
-
-int send_socket(int socket_desc, uint8_t *message, long long message_length)
-{
-    if( send(socket_desc , message , message_length, 0) < 0)
-    {
-        puts("Send failed");
-        return 1;
-    }
-    return 0;
-}
+#include "../include/lib.h"
 
 int main(int argc, char **argv)
 {
+    /* GetOpt */
     if (argc == 1)
     {
         printf("Usage : '-g file_name' to get file\n \
@@ -31,7 +23,6 @@ int main(int argc, char **argv)
        '-l' to get the list of all files\n");
         return 1;
     }
-    /* GetOpt */
     int list_flag = 0;
     char *get_value = NULL;
     char *upl_value = NULL;
@@ -70,31 +61,6 @@ int main(int argc, char **argv)
         printf ("Non-option argument %s\n", argv[index]);
     /* End GetOpt */
 
-
-    int socket_desc;
-    struct sockaddr_in server;
-     
-    //Create socket
-    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
-    if (socket_desc == -1)
-    {
-        printf("Could not create socket");
-    }
-         
-    /* Put the proxy address there */
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
-    server.sin_family = AF_INET;
-    server.sin_port = htons(4242);
- 
-    //Connect to remote server
-    if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
-    {
-        puts("connect error");
-        return 1;
-    }
-     
-    puts("Connected\n");
-     
     long long  message_length = 0;
 //    uint8_t *message;
     if (get_value != NULL)
@@ -115,7 +81,7 @@ int main(int argc, char **argv)
         memcpy(message + static_size, get_value, filename_len);
         for (size_t i = 0; i < (size_t)message_length; i++)
             printf("%d\n", message[i]);
-        return send_socket(socket_desc, message, message_length);
+        return send_ucast_msg("127.0.0.1", "4242", message, message_length);
     }
     else if (list_flag == 1)
     {
@@ -126,7 +92,7 @@ int main(int argc, char **argv)
         message[1] = 2;
 
         printf("List files\n");
-        return send_socket(socket_desc, message, message_length);
+        return send_ucast_msg("127.0.0.1", "4242", message, message_length);
     }
     else if (upl_value != NULL)
     {
@@ -138,6 +104,22 @@ int main(int argc, char **argv)
         char *buffer_file;
         int errnum;
         size_t static_size = 13;
+        /*
+        int filename_len = strlen(upl_value);
+        char *save = malloc(filename_len * sizeof(char));
+
+        char * filename = strtok(upl_value, "/");
+        while (filename != NULL)
+        {
+            printf("%s\n", filename);
+            strcpy(save, filename);
+            filename = strtok(NULL, "/");
+        }
+
+        printf("Size : %d\n", filename_len);
+
+*/
+
 
         fp = fopen (upl_value, "rb");
         if (fp == NULL)
@@ -207,12 +189,13 @@ int main(int argc, char **argv)
         /* Copying file content to buffer which will be send in the socket */
         memcpy(message + static_size - 1, buffer_file, file_size); 
 
+
         /* Digest value set to 0. Not implemented yet. */
         message[file_size + static_size] = 0;
 
         fclose(fp);
         free(buffer_file);
-        return send_socket(socket_desc, message, message_length);
+        return send_ucast_msg("127.0.0.1", "4242", message, message_length);
     }
     return 0;
 }
