@@ -1,5 +1,5 @@
 #include "../include/lib.h"
-/*
+
 void send_mcast_msg(char *databuf, int datalen, uint16_t port, const char* mcast_group)
 {
     struct in_addr Local_interface = (struct in_addr) { 0 };
@@ -31,7 +31,6 @@ void send_mcast_discover(uint16_t port, const char* mcast_group)
   msg[1] = 8;
   send_mcast_msg(&msg, 2, port, mcast_group);
 }
-*/
 
 void hash_string_sha256(uint8_t hash[SHA256_DIGEST_LENGTH], char output[256])
 {
@@ -158,10 +157,12 @@ void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
     memcpy(message + static_size, filename, name_len);
     memcpy(message + static_size + name_len, digest, digest_len);
 
-    message[static_size + name_len + digest_len] = 0;
+    message[message_length] = 0;
 
     fclose(file);
     free(token);
+
+    send_mcast_msg(message, message_length, port, mcast_group);
 }
 
 int send_ucast_msg(char *address, int port, uint8_t *message, long long message_length)
