@@ -18,7 +18,7 @@
 #include <unistd.h>
 
 #include "../include/rush.h"
-
+#include "../include/lib.h"
 
 typedef struct
 {
@@ -611,7 +611,7 @@ int main(void)
     config.watched_dir_len = strlen(config.watched_dir);
     config.unicast_bind_addr_str = "::";
     config.unicast_bind_port_str = "4242";
-
+    
     int result = rush_frontend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
@@ -768,6 +768,5 @@ int main(void)
     fclose(stdin);
     fclose(stdout);
     fclose(stderr);
-
     return result;
 }

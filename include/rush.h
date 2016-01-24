@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+//Lib for the lists and other structures
+#include "sglib.h"
 
 #define FRONTEND_GROUP "239.42.3.2"
 #define SAN_GROUP "239.42.3.1"
@@ -15,6 +17,24 @@
 #define LOCAL_IFACE "192.168.1.212"
 #define FE_MCAST_PORT 4243
 #define BE_MCAST_PORT 4321
+
+typedef struct
+{
+    uint16_t name_len;
+    uint32_t nb_BE_having_file;
+    uint8_t dgst_type_file1;
+    char* filename;
+    uint8_t BE1_addr_type;
+    uint32_t BE1_addr;
+    uint8_t BE2_addr_type;
+    uint32_t BE2_addr;
+    
+} BE_file_info;
+
+struct BE_file_info_list {
+    BE_file_info elt;
+    struct BE_file_info_list *next_elt;
+};
 
 typedef enum
 {
