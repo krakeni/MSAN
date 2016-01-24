@@ -104,22 +104,21 @@ int main(int argc, char **argv)
         char *buffer_file;
         int errnum;
         size_t static_size = 13;
-        /*
-        int filename_len = strlen(upl_value);
-        char *save = malloc(filename_len * sizeof(char));
 
-        char * filename = strtok(upl_value, "/");
-        while (filename != NULL)
+        /* Parsing command line */
+        char *param_copy = strdup(upl_value);
+        char *filename_final = strtok(param_copy, "/");
+
+        while (filename_final != NULL)
         {
-            printf("%s\n", filename);
-            strcpy(save, filename);
-            filename = strtok(NULL, "/");
+            param_copy = filename_final;
+            filename_final = strtok(NULL, "/");
         }
-
-        printf("Size : %d\n", filename_len);
-
-*/
-
+        printf(param_copy);
+        filename_final = param_copy;
+        int filename_len = strlen(filename_final);
+        printf("Filename : %s and filename_len : %d\n", filename_final, filename_len);
+        /* End Reading content of file */
 
         fp = fopen (upl_value, "rb");
         if (fp == NULL)
@@ -143,12 +142,12 @@ int main(int argc, char **argv)
         fread(buffer_file, file_size, 1 , fp);
         /* End reading content of file */
 
-        message_length = file_size + static_size;
+        message_length = file_size + static_size + 2 + filename_len;
        // message = malloc(message_length * sizeof (uint8_t));
         uint8_t message[message_length];
 
         message[0] = 1; // Set version
-        message[1] = 5; // Set message type
+        message[1] = 9; // Set message type
         message[2] = 0; // Set status code, it is 0 since fp != null
         message[3] = 0; // Digest not handled yet
 
@@ -174,6 +173,7 @@ int main(int argc, char **argv)
         message[11] = file_size - (message[10] * 256);
 
         /* Debug logs */
+        /*
         printf("byte 4: %d\n", message[5]);
         printf("byte 5: %d\n", message[5]);
         printf("byte 6: %d\n", message[6]);
@@ -182,6 +182,7 @@ int main(int argc, char **argv)
         printf("byte 9: %d\n", message[9]);
         printf("byte 10: %d\n", message[10]);
         printf("byte 11: %d\n", message[11]);
+        */
 
         printf("Message length = %llu\n", message_length);
         /* End debug logs */
@@ -191,7 +192,24 @@ int main(int argc, char **argv)
 
 
         /* Digest value set to 0. Not implemented yet. */
-        message[file_size + static_size] = 0;
+        message[file_size + static_size - 1] = 0;
+
+        /* Handling type 9 here */
+
+        /* Add filename len */
+        printf("TEST : %d\n", file_size + static_size - 1);
+        message[file_size + static_size] = filename_len / 256;
+        message[file_size + static_size + 1] = filename_len - 
+            (message[file_size + static_size] * 256);
+
+        /* Copying file name */
+        memcpy(message + static_size + file_size + 2, filename_final, filename_len);
+
+        /* End handling type 9 */
+
+        for (int i = 0; i < message_length; i++)
+            printf("byte %d :  %"PRIu8"\n", i, message[i]);
+
 
         fclose(fp);
         free(buffer_file);
