@@ -27,6 +27,8 @@ void send_mcast_msg(char *databuf, int datalen, uint16_t port, const char* mcast
 void send_mcast_discover(uint16_t port, const char* mcast_group)
 {
   char msg[2];
+  msg[0] = 1;
+  msg[1] = 8;
   send_mcast_msg(&msg, 2, port, mcast_group);
 }
 
