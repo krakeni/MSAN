@@ -160,3 +160,16 @@ void send_mcast_alive(uint16_t port, const char* mcast_group)
   send_mcast_msg(&msg, 2, port, mcast_group);
 }
 
+void send_mcast_disp_new_file(uint16_t port, const char* mcast_group, char *filename)
+{
+    uint32_t msglen = 4;
+    msglen += strlen(filename);
+    char msg[msglen];
+    msg[0] = 1;
+    msg[1] = 6;
+    uint16_t namelen = strlen(filename);
+    memcpy(msg + 2, &namelen, 2);
+    memcpy(msg + 4, filename, namelen);
+    send_mcast_msg(&msg, 2, port, mcast_group);    
+}
+
