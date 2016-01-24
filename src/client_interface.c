@@ -81,7 +81,7 @@ int main(int argc, char **argv)
         memcpy(message + static_size, get_value, filename_len);
         for (size_t i = 0; i < (size_t)message_length; i++)
             printf("%d\n", message[i]);
-        return send_ucast_msg("127.0.0.1", "4242", message, message_length);
+        return send_ucast_msg("127.0.0.1", 4242, message, message_length);
     }
     else if (list_flag == 1)
     {
@@ -92,7 +92,7 @@ int main(int argc, char **argv)
         message[1] = 2;
 
         printf("List files\n");
-        return send_ucast_msg("127.0.0.1", "4242", message, message_length);
+        return send_ucast_msg("127.0.0.1", 4242, message, message_length);
     }
     else if (upl_value != NULL)
     {
@@ -150,15 +150,15 @@ int main(int argc, char **argv)
         message[0] = 1; // Set version
         message[1] = 5; // Set message type
         message[2] = 0; // Set status code, it is 0 since fp != null
-        message[3] = 0; // Digest not handled yet 
-        
+        message[3] = 0; // Digest not handled yet
+
         /* Size of file on 64 bits */
 
         int power = 64 - 8;
         message[4] = file_size / pow(2, power);
         long long current_size = file_size;
 
-        for (int i = 5; i < 11; i++) 
+        for (int i = 5; i < 11; i++)
         {
             power -= 8;
             if (message[i - 1] == 0)
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
         }
 
         message[11] = file_size - (message[10] * 256);
-        
+
         /* Debug logs */
         printf("byte 4: %d\n", message[5]);
         printf("byte 5: %d\n", message[5]);
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
         /* End debug logs */
 
         /* Copying file content to buffer which will be send in the socket */
-        memcpy(message + static_size - 1, buffer_file, file_size); 
+        memcpy(message + static_size - 1, buffer_file, file_size);
 
 
         /* Digest value set to 0. Not implemented yet. */
@@ -195,8 +195,7 @@ int main(int argc, char **argv)
 
         fclose(fp);
         free(buffer_file);
-        return send_ucast_msg("127.0.0.1", "4242", message, message_length);
+        return send_ucast_msg("127.0.0.1", 4242, message, message_length);
     }
     return 0;
 }
-
