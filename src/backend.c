@@ -175,6 +175,181 @@ static void rush_backend_handle_dir_event(rush_backend_config const * const conf
     while (finished == false);
 }
 
+/*
+static void BE_advertise_file_handle(rush_frontend_config const * const config,
+				       int const conn_socket)
+{
+    int result = EINVAL;
+    ssize_t got = 0;
+
+    // TYPE == 1
+    // name_len
+    uint16_t name_len_net = 0;
+
+    got = read(conn_socket,
+            &name_len_net,
+            sizeof name_len_net);
+
+    if (got == sizeof name_len_net)
+    {
+	uint16_t const name_len = ntohs(name_len_net);
+	// content_len
+	uint64_t content_len_net = 0;
+
+	got = read(conn_socket,
+		&content_len_net,
+		sizeof content_len_net);
+
+	if (got == sizeof content_len_net)
+	{
+	    uint32_t content_len_net_low = content_len_net;
+	    uint32_t content_len_net_high = content_len_net >> 32;
+	    uint32_t low_32 = ntohl(content_len_net_low);
+	    uint32_t high_32 = ntohl(content_len_net_high);
+
+	    uint64_t content_len = (high_32 << 32) + low_32;
+
+	    // digest_type
+	    uint8_t digest_type = 0;
+
+	    got = read(conn_socket,
+		    &digest_type,
+		    sizeof digest_type);
+
+	    if (got == sizeof digest_type)
+	    {
+		char* name = malloc(name_len + 1);
+
+		if (name != NULL)
+		{
+		}
+		else
+		{
+		    result = ENOMEM;
+		    fprintf(stderr,
+			    "Error allocating memory for name of size %" PRIu16 ": %d\n",
+			    name_len,
+			    result);
+		}
+	    }
+	    else if (got == -1)
+	    {
+		result = errno;
+		fprintf(stderr,
+			"Error reading digest type of advertise file message: %d\n",
+			result);
+	    }
+	    else
+	    {
+		fprintf(stderr,
+			"Not enough data available, skipping.\n");
+	    }
+	}
+	else if (got == -1)
+	{
+	    result = errno;
+	    fprintf(stderr,
+		    "Erro rreading content length of advertise file message: %d\n",
+		    result);
+	}
+	else
+	{
+	    fprintf(stderr,
+		    "Not enough data available, skipping.\n");
+	}
+    }
+    else if (got == -1)
+    {
+	result = errno;
+	fprintf(stderr,
+		"Error reading name length of advertise file message: %d\n",
+		result);
+    }
+    else
+    {
+	fprintf(stderr,
+		"Not enough data available, skipping.\n");
+    }
+}
+*/
+
+static void BE_FE_rqst_content_message(rush_backend_config const * const config,
+	int const conn_socket)
+{
+    int result = EINVAL;
+    ssize_t got = 0;
+    assert(config != NULL);
+
+    // TYPE == 4
+    // UNICAST RQST CONTENT OF A FILE
+    uint16_t name_len_net = 0;
+
+    got = read(conn_socket,
+	    &name_len_net,
+	    sizeof name_len_net);
+
+    if (got == sizeof name_len_net)
+    {
+	uint16_t const name_len = ntohs(name_len_net);
+	char * name = malloc(name_len + 1);
+
+	if (name != NULL)
+	{
+	    got = read(conn_socket,
+		    name,
+		    name_len);
+
+	    if (got == name_len)
+	    {
+		name[name_len] = '\0';
+
+		fprintf(stdout,
+			"DEBUG: received request for file %s\n",
+			name);
+
+#warning FIXME: Some code has been deleted.
+
+	    }
+	    else if (got == -1)
+	    {
+		result = errno;
+		fprintf(stderr,
+			"Error reading name of get_file message: %d\n",
+			result);
+	    }
+	    else
+	    {
+		fprintf(stderr,
+			"Not enough data available, skipping.\n");
+	    }
+
+	    free(name);
+	    name = NULL;
+	}
+	else
+	{
+	    result = ENOMEM;
+	    fprintf(stderr,
+		    "Error allocating memory for name of size %"PRIu16": %d\n",
+		    name_len,
+		    result);
+	}
+    }
+    else if (got == -1)
+    {
+	result = errno;
+	fprintf(stderr,
+		"Error reading name length of get_file message: %d\n",
+		result);
+    }
+    else
+    {
+	fprintf(stderr,
+		"Not enough data available, skipping.\n");
+    }
+
+}
+
 static void BE_FE_send_content_message(rush_backend_config const * const config,
         int const conn_socket)
 {
@@ -440,73 +615,8 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 }
                 else if (type == rush_message_type_get_file)
                 {
-                    // TYPE == 4
-                    // UNICAST RQST CONTENT OF A FILE
-                    uint16_t name_len_net = 0;
-
-                    got = read(conn_socket,
-                            &name_len_net,
-                            sizeof name_len_net);
-
-                    if (got == sizeof name_len_net)
-                    {
-                        uint16_t const name_len = ntohs(name_len_net);
-                        char * name = malloc(name_len + 1);
-
-                        if (name != NULL)
-                        {
-                            got = read(conn_socket,
-                                    name,
-                                    name_len);
-
-                            if (got == name_len)
-                            {
-                                name[name_len] = '\0';
-
-                                fprintf(stdout,
-                                        "DEBUG: received request for file %s\n",
-                                        name);
-
-#warning FIXME: Some code has been deleted.
-
-                            }
-                            else if (got == -1)
-                            {
-                                result = errno;
-                                fprintf(stderr,
-                                        "Error reading name of get_file message: %d\n",
-                                        result);
-                            }
-                            else
-                            {
-                                fprintf(stderr,
-                                        "Not enough data available, skipping.\n");
-                            }
-
-                            free(name);
-                            name = NULL;
-                        }
-                        else
-                        {
-                            result = ENOMEM;
-                            fprintf(stderr,
-                                    "Error allocating memory for name of size %"PRIu16": %d\n",
-                                    name_len,
-                                    result);
-                        }
-                    }
-                    else if (got == -1)
-                    {
-                        result = errno;
-                        fprintf(stderr,
-                                "Error reading name length of get_file message: %d\n",
-                                result);
-                    }
-                    else
-                    {
-                        fprintf(stderr,
-                                "Not enough data available, skipping.\n");
-                    }
+		    // TYPE == 4
+		    BE_FE_rqst_content_message(config, conn_socket);
                 }
                 else if (type == rush_message_type_get_file_response)
                 {
