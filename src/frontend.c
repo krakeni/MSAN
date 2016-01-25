@@ -514,12 +514,14 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 
             if (got == sizeof type)
             {
-                if (type == rush_message_type_list_files)
-                {
-                    // TYPE == 2
-                    // UNICAST RQST LIST OF FILES
-                    // FIXME
-                }
+		if (type == rush_message_type_list_files)
+		{
+		    // TYPE == 2
+		    // UNICAST RQST LIST OF FILES
+		    // FIXME
+		    //Vient de l'interface qui demande la liste des fichiers
+		    //Il faudra envoyer en multicast une requête de discover
+		    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
                 else if (type == rush_message_type_list_files_response)
                 {
                     // TYPE == 3
@@ -626,6 +628,19 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 
 
                 }
+		else if (type == rush_message_type_file_available_here)
+		{
+		    // TYPE = 6
+		    // Back-end multicast message advertising the disponibility of a file
+
+		}
+		else if (type == rush_message_type_alive)
+		{
+		    // TYPE = 7
+		    // Back-end alive multicast message
+		    //Face à un alive message on stocke les IP qui ont répondu
+		    
+		}
                 else
                 {
                     fprintf(stderr,
