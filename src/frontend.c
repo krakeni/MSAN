@@ -58,7 +58,6 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
             got = read(conn_socket,
                     &content_len_net,
                     sizeof content_len_net);
-            printf("Content len net: %llu\n", content_len_net);
             printf("sizeof Content len net: %lu\n", sizeof content_len_net);
             printf("got: %zu\n", got);
 
@@ -112,6 +111,8 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
                                         digest_len = 0;
                                         break;
                                 }
+                                /* Chars are encoded on 2 bytes so a 32 bytes hash will have 4 caracters. */
+                                digest_len *= 2;
 
                                 char * digest = malloc((digest_len + 1) * sizeof (uint8_t));
 
@@ -126,34 +127,49 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
 
                                     if (got == digest_len)
                                     {
-                                        digest[digest_len] = '\0';
-                                        // HANDLE HERE TYPE 9
+                                        /* Here starts the new message type 9 */
+                                        /* Get filename_len */
+                                        uint16_t filename_len_net = 0;
                                         uint16_t filename_len = 0;
-                                        got = read(conn_socket, &filename_len, sizeof filename_len);
-                                        printf("Got :%d and filename_len : %d\n", got, sizeof filename_len);
+
+                                        got = read(conn_socket, 
+                                                &filename_len_net, 
+                                                sizeof filename_len);
+
                                         if (got == sizeof filename_len)
                                         {
-                                            char *filename = malloc((filename_len + 1) * sizeof (char));
-                                            got = read(conn_socket, filename, filename_len);
-                                            printf(filename);
 
-                                        printf("Got :%d and filename : %d\n", got, sizeof filename - 1);
-                                            if (got == sizeof filename)
+                                            /* Get filename */
+                                            filename_len = ntohs(filename_len_net);
+                                            char *filename = malloc((filename_len + 1) * sizeof (char)); 
+                                            got = read(conn_socket,
+                                                    filename,
+                                                    filename_len);
+
+                                            printf("Filename_len : %"PRIu16"\n", filename_len);
+                                            printf("Filename : %s\n", filename);
+
+                                            filename[filename_len] = '\0';
+
+                                            /* Write in file */
+
+                                            FILE *file = fopen(filename, "w+");
+                                            if (file == NULL)
                                             {
-
-                                                filename[filename_len] = '\0';
-
-                                                FILE * file = NULL;
-                                                file = fopen(filename, "w+");
-                                                printf("Filename : %s\n", filename);
-
-                                                if (file != NULL)
-                                                {
-                                                    fwrite(content, content_len, 1, file);
-                                                }
-                                                fclose(file);
+                                                int errnum = errno;
+                                                fprintf(stderr, "Can't access the file. Reason : \n errno : %d", errnum);
+                                                return;
                                             }
+
+                                            fputs(content, file);
+                                            fclose(file);
+
+                                            //FIXME
+                                            /* Write in DB */
+
                                         }
+                                        
+
                                     }
                                     else if (got == -1)
                                     {
@@ -259,6 +275,8 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
         fprintf(stderr,
                 "Not enough data available for status code, skipping.\n");
     }
+
+}
 
 void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
 {
