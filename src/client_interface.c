@@ -149,7 +149,7 @@ int main(int argc, char **argv)
         message[0] = 1; // Set version
         message[1] = 9; // Set message type
         message[2] = 0; // Set status code, it is 0 since fp != null
-        message[3] = 0; // Digest not handled yet
+        message[3] = 1; // Digest not handled yet
 
         /* Size of file on 64 bits */
 
@@ -192,18 +192,25 @@ int main(int argc, char **argv)
 
 
         /* Digest value set to 0. Not implemented yet. */
-        message[file_size + static_size - 1] = 0;
+        //message[file_size + static_size - 1] = 99;
+        //
+
+        uint8_t digest_buffer[20];
+        for (int i = 0; i < 20; i++)
+            digest_buffer[i] = '1';
+
+        memcpy(message + static_size + file_size - 1, digest_buffer, 20);
 
         /* Handling type 9 here */
 
         /* Add filename len */
         printf("TEST : %d\n", file_size + static_size - 1);
-        message[file_size + static_size] = filename_len / 256;
-        message[file_size + static_size + 1] = filename_len - 
+        message[file_size + static_size + file_size + 20] = filename_len / 256;
+        message[file_size + static_size + 21] = filename_len - 
             (message[file_size + static_size] * 256);
 
         /* Copying file name */
-        memcpy(message + static_size + file_size + 2, filename_final, filename_len);
+        memcpy(message + static_size + file_size + 22, filename_final, filename_len);
 
         /* End handling type 9 */
 
