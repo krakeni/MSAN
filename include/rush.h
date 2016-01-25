@@ -15,6 +15,7 @@
 #define SAN_PORT 4241
 #define FRONTEND_PORT 4242
 //Changes this IP according to your Interface IP
+
 #define LOCAL_IFACE "192.168.0.11"
 #define FE_MCAST_PORT 4243
 #define BE_MCAST_PORT 4321
@@ -48,6 +49,7 @@ typedef enum
     rush_message_type_file_available_here = 6,
     rush_message_type_alive               = 7,
     rush_message_type_discover            = 8,
+    rush_message_new_file_from_front      = 9,
     rush_message_type_invalid
 } rush_message_type;
 
