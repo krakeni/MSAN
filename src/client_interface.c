@@ -14,6 +14,7 @@
 
 #include "../include/lib.h"
 
+#define DEBUG 1
 #ifdef DEBUG
 # define DEBUG_PRINT(x) printf x
 #else
@@ -23,7 +24,6 @@
 
 char *FRONT_ADDRESS = "127.0.0.1";
 int FRONT_PORT = 4242;
-int LOG = 0;
 
 void option_help()
 {
@@ -171,6 +171,8 @@ int main(int argc, char **argv)
         /* Size of the message without Content, digest value and filename which are variable */
         size_t static_message_size = 14;
 
+
+
         fp = fopen (upl_value, "rb");
         /* Handle errors when opening file */
         if (fp == NULL)
@@ -195,7 +197,13 @@ int main(int argc, char **argv)
 
         content = calloc(1, content_len + 1);
         fread(content, content_len, 1 , fp);
+        fclose(fp);
         /* End reading content of file */
+
+        size_t digest_len = rush_digest_type_to_size(digest_type) * 2;
+        digest_value = malloc((int) digest_len * sizeof(char));
+        int digest_value_pos_in_buffer = 12 + content_len;
+        get_hash_sha256(upl_value, digest_value);
 
         /* Parse filename */
 
@@ -211,7 +219,6 @@ int main(int argc, char **argv)
         }
 
 
-       // message = malloc(message_length * sizeof (uint8_t));
         uint8_t message[message_length];
 
         message[0] = version; 
@@ -223,7 +230,7 @@ int main(int argc, char **argv)
         /* Size of file on 64 bits */
 
         int power = 64 - 8;
-        message[4] = content_len / pow(2, power);
+        message[4] = (uint8_t) (content_len / pow(2, power));
         long long current_size = content_len;
 
         for (int i = 5; i < 11; i++) 
@@ -241,31 +248,17 @@ int main(int argc, char **argv)
 
         message[11] = content_len - (message[10] * 256);
         
-        DEBUG_PRINT(("byte 4: %d\n", message[5]));
-        DEBUG_PRINT(("byte 5: %d\n", message[5]));
-        DEBUG_PRINT(("byte 6: %d\n", message[6]));
-        DEBUG_PRINT(("byte 7: %d\n", message[7]));
-        DEBUG_PRINT(("byte 8: %d\n", message[8]));
-        DEBUG_PRINT(("byte 9: %d\n", message[9]));
-        DEBUG_PRINT(("byte 10: %d\n", message[10]));
-        DEBUG_PRINT(("byte 11: %d\n", message[11]));
-
-
-
         /* Copying file content to buffer which will be send in the socket */
-        size_t digest_len = rush_digest_type_to_size(digest_type);
-        digest_value = malloc(digest_len * sizeof(char));
-        int digest_value_pos_in_buffer = 12 + content_len - 1;
-        get_hash_sha256(upl_value, digest_value);
 
         uint16_t filename_len = strlen(filename_final);
+        memset(message + 12 + 1 + content_len, 0, 36);
+        message_length = content_len + static_message_size + digest_len + filename_len;
         /* Copying in buffer */
-        memcpy(message + 4, content, content_len); 
+        memcpy(message + 12, content, content_len);
+        memcpy(message + digest_value_pos_in_buffer, digest_value, digest_len);
 
-        memcpy(message + digest_value_pos_in_buffer + 1, digest_value, digest_len);
-
-        message[digest_value_pos_in_buffer + digest_len - 1] = filename_len / 256;
-        message[digest_value_pos_in_buffer + digest_len] = filename_len - 
+        message[digest_value_pos_in_buffer + digest_len] = filename_len / 256;
+        message[digest_value_pos_in_buffer + digest_len + 1] = filename_len - 
             (message[content_len + static_message_size] * 256);
 
         memcpy(message + digest_value_pos_in_buffer + digest_len + 2, filename_final, filename_len);
@@ -275,9 +268,7 @@ int main(int argc, char **argv)
             DEBUG_PRINT(("byte %d :  %"PRIu8"\n", i, message[i]));
 
 
-        fclose(fp);
         free(content);
-        message_length = content_len + static_message_size;
         return send_socket(socket_desc, message, message_length);
     }
     return 0;
