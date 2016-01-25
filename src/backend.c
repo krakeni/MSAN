@@ -376,7 +376,7 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
         got = read(conn_socket,
                 &digest_type,
                 sizeof digest_type);
-	printf("Digest type: %" PRIu8 "\n", digest_type);
+        printf("Digest type: %" PRIu8 "\n", digest_type);
 
         if (got == sizeof digest_type)
         {
@@ -386,19 +386,19 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
             got = read(conn_socket,
                     &content_len_net,
                     sizeof content_len_net);
-	    printf("Content len net: %llu\n", content_len_net);
-	    printf("sizeof Content len net: %lu\n", sizeof content_len_net);
-	    printf("got: %zu\n", got);
+            printf("Content len net: %llu\n", content_len_net);
+            printf("sizeof Content len net: %lu\n", sizeof content_len_net);
+            printf("got: %zu\n", got);
 
             if (got == sizeof content_len_net)
-	    {
-		uint32_t content_len_net_low = content_len_net;
-		uint32_t content_len_net_high = content_len_net >> 32;
-		uint32_t low_32 = ntohl(content_len_net_low);
-		uint32_t high_32 = ntohl(content_len_net_high);
+            {
+                uint32_t content_len_net_low = content_len_net;
+                uint32_t content_len_net_high = content_len_net >> 32;
+                uint32_t low_32 = ntohl(content_len_net_low);
+                uint32_t high_32 = ntohl(content_len_net_high);
 
-		uint64_t content_len = (high_32 << 32) + low_32;
-		printf("Content len: %" PRIu64 "\n", content_len);
+                uint64_t content_len = ((uint64_t)high_32 << 32) + low_32;
+                printf("Content len: %" PRIu64 "\n", content_len);
                 if (content_len_net == 0 && digest_type != rush_digest_type_none)
                 {
                     fprintf(stderr,
@@ -418,7 +418,7 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
                             got = read(conn_socket,
                                     content,
                                     content_len);
-			    printf("Content: %s\n", content);
+                            printf("Content: %s\n", content);
 
                             if (got == (int)content_len)
                             {
@@ -448,22 +448,22 @@ static void BE_FE_send_content_message(rush_backend_config const * const config,
                                     got = read(conn_socket,
                                             digest,
                                             digest_len);
-				    printf("Digest len: %" PRIu8 "\n", digest_len);
-				    printf("Got: %zu\n", got);
-				    printf("Digest: %s\n", digest);
+                                    printf("Digest len: %" PRIu8 "\n", digest_len);
+                                    printf("Got: %zu\n", got);
+                                    printf("Digest: %s\n", digest);
 
                                     if (got == digest_len)
-				    {
-					digest[digest_len] = '\0';
-					FILE * file = NULL;
-					file = fopen("test.txt", "w+");
+                                    {
+                                        digest[digest_len] = '\0';
+                                        FILE * file = NULL;
+                                        file = fopen("test.txt", "w+");
 
-					if (file != NULL)
-					{
-					    fwrite(content, content_len, 1, file);
-					}
-					fclose(file);
-				    }
+                                        if (file != NULL)
+                                        {
+                                            fwrite(content, content_len, 1, file);
+                                        }
+                                        fclose(file);
+                                    }
                                     else if (got == -1)
                                     {
                                         result = errno;
@@ -593,7 +593,7 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
             got = read(conn_socket,
                     &type,
                     sizeof type);
-	    printf("Type: %" PRIu8 "\n", type);
+            printf("Type: %" PRIu8 "\n", type);
 
             if (got == sizeof type)
             {
