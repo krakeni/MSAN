@@ -93,6 +93,7 @@ static int rush_backend_handle_new_file(rush_backend_config const * const config
 
         if (result > 0)
         {
+	    printf("HERE I AM\n");
 #warning FIXME: Some code has been deleted.
 
             free(path);
@@ -195,18 +196,13 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
             printf("Type: %" PRIu8 "\n", type);
 
             if (got == sizeof type)
-            {
-                if (type == rush_message_type_new_file)
-                {
-                    // TYPE == 1
-                    // name_len
-                    // content_len
-                    // digest_type
-                    // name
-                    // digest
-                    // FIXME
-                }
-                else if (type == rush_message_type_list_files)
+	    {
+		if (type == rush_message_type_new_file)
+		{
+		    // TYPE == 1
+		    BE_advertise_file_handle(conn_socket);
+		}
+		else if (type == rush_message_type_list_files)
                 {
                     // TYPE == 2
                     // UNICAST RQST LIST OF FILES
@@ -222,10 +218,10 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                     // TYPE == 5
                     BE_FE_send_content_message(config, conn_socket);
                 }
-                else if (type == rush_message_type_discover)
-                {
-                    // TYPE == 8
-                }
+		else if (type == rush_message_type_discover)
+		{
+		    // TYPE == 8
+		}
                 else
                 {
                     fprintf(stderr,
@@ -257,7 +253,7 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
     {
         result = errno;
         fprintf(stderr,
-                "Error reading message type: %d\n",
+                "Error reading message version: %d\n",
                 result);
     }
     else

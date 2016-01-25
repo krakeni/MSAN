@@ -1,8 +1,6 @@
 #include "../include/handlers.h"
 
-/*
-static void BE_advertise_file_handle(rush_frontend_config const * const config,
-				       int const conn_socket)
+void BE_advertise_file_handle(int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
@@ -18,6 +16,7 @@ static void BE_advertise_file_handle(rush_frontend_config const * const config,
     if (got == sizeof name_len_net)
     {
 	uint16_t const name_len = ntohs(name_len_net);
+	printf("Name len: %" PRIu16 "\n", name_len);
 	// content_len
 	uint64_t content_len_net = 0;
 
@@ -33,6 +32,7 @@ static void BE_advertise_file_handle(rush_frontend_config const * const config,
 	    uint32_t high_32 = ntohl(content_len_net_high);
 
 	    uint64_t content_len = (high_32 << 32) + low_32;
+	    printf("Content len: %" PRIu64 "\n", content_len);
 
 	    // digest_type
 	    uint8_t digest_type = 0;
@@ -41,12 +41,76 @@ static void BE_advertise_file_handle(rush_frontend_config const * const config,
 		    &digest_type,
 		    sizeof digest_type);
 
+	    printf("Digest type: %" PRIu8 "\n", digest_type);
+
 	    if (got == sizeof digest_type)
 	    {
+		// name
 		char* name = malloc(name_len + 1);
 
 		if (name != NULL)
 		{
+		    got = read(conn_socket,
+			    name,
+			    name_len);
+
+		    printf("Name: %s\n", name);
+
+		    if (got == name_len)
+		    {
+			name[name_len] = '\0';
+
+			// digest
+			size_t digest_len = rush_digest_type_to_size(digest_type);
+			char* digest = malloc(digest_len + 1);
+
+			if (digest != NULL)
+			{
+			    got = read(conn_socket,
+				    digest,
+				    digest_len);
+
+			    printf("Digest: %s\n", digest);
+
+			    if (got == sizeof digest_len)
+			    {
+				digest[digest_len] = '\0';
+				// FIXME
+			    }
+			    else if (got == -1)
+			    {
+				result = errno;
+				fprintf(stderr,
+					"Error reading digest of advertise file message: %d\n",
+					result);
+			    }
+			    else
+			    {
+				fprintf(stderr,
+					"Not enough data available, skipping.\n");
+			    }
+			}
+			else
+			{
+			    result = ENOMEM;
+			    fprintf(stderr,
+				    "Error allocatinf memory for digest of size %zu: %d\n",
+				    digest_len,
+				    result);
+			}
+		    }
+		    else if (got == -1)
+		    {
+			result = errno;
+			fprintf(stderr,
+				"Error reading name of advertise file message: %d\n",
+				result);
+		    }
+		    else
+		    {
+			fprintf(stderr,
+				"Not enough data available, skipping.\n");
+		    }
 		}
 		else
 		{
@@ -96,7 +160,6 @@ static void BE_advertise_file_handle(rush_frontend_config const * const config,
 		"Not enough data available, skipping.\n");
     }
 }
-*/
 
 void BE_FE_rqst_content_message(rush_backend_config const * const config,
 	int const conn_socket)
@@ -222,7 +285,7 @@ void BE_FE_send_content_message(rush_backend_config const * const config,
                 uint32_t low_32 = ntohl(content_len_net_low);
                 uint32_t high_32 = ntohl(content_len_net_high);
 
-                uint64_t content_len = ((uint64_t)high_32 << 32) + low_32;
+                uint64_t content_len = (high_32 << 32) + low_32;
                 printf("Content len: %" PRIu64 "\n", content_len);
                 if (content_len_net == 0 && digest_type != rush_digest_type_none)
                 {

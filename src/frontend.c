@@ -190,7 +190,8 @@ static void rush_frontend_handle_dir_event(rush_frontend_config const * const co
     while (finished == false);
 }
 
-static int BE_advertise_file_handle(/*rush_frontend_config const * const config,*/
+/*
+static int BE_advertise_file_handle(rush_frontend_config const * const config,
 				       int const conn_socket)
 {
     int result = 0;
@@ -217,6 +218,7 @@ static int BE_advertise_file_handle(/*rush_frontend_config const * const config,
     }
     return result;
 }
+*/
 
 static int BE_alive_message(/*rush_frontend_config const * const config,*/
 				       int const conn_socket)
@@ -356,6 +358,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		    // TYPE = 6
 		    // Back-end multicast message advertising the disponibility of a file
 
+		    printf("HERE I AM\n");
 		}
 		else if (type == rush_message_type_alive)
 		{
