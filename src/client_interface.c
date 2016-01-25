@@ -11,11 +11,19 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <math.h>
-#include "../include/lib.h"
+
+int send_socket(int socket_desc, uint8_t *message, long long message_length)
+{
+    if( send(socket_desc , message , message_length, 0) < 0)
+    {
+        puts("Send failed");
+        return 1;
+    }
+    return 0;
+}
 
 int main(int argc, char **argv)
 {
-    /* GetOpt */
     if (argc == 1)
     {
         printf("Usage : '-g file_name' to get file\n \
@@ -23,6 +31,7 @@ int main(int argc, char **argv)
        '-l' to get the list of all files\n");
         return 1;
     }
+    /* GetOpt */
     int list_flag = 0;
     char *get_value = NULL;
     char *upl_value = NULL;
@@ -61,6 +70,31 @@ int main(int argc, char **argv)
         printf ("Non-option argument %s\n", argv[index]);
     /* End GetOpt */
 
+
+    int socket_desc;
+    struct sockaddr_in server;
+     
+    //Create socket
+    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+    if (socket_desc == -1)
+    {
+        printf("Could not create socket");
+    }
+         
+    /* Put the proxy address there */
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_family = AF_INET;
+    server.sin_port = htons(4242);
+ 
+    //Connect to remote server
+    if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
+    {
+        puts("connect error");
+        return 1;
+    }
+     
+    puts("Connected\n");
+     
     long long  message_length = 0;
 //    uint8_t *message;
     if (get_value != NULL)
@@ -81,7 +115,7 @@ int main(int argc, char **argv)
         memcpy(message + static_size, get_value, filename_len);
         for (size_t i = 0; i < (size_t)message_length; i++)
             printf("%d\n", message[i]);
-        return send_ucast_msg("127.0.0.1", 4242, message, message_length);
+        return send_socket(socket_desc, message, message_length);
     }
     else if (list_flag == 1)
     {
@@ -92,7 +126,7 @@ int main(int argc, char **argv)
         message[1] = 2;
 
         printf("List files\n");
-        return send_ucast_msg("127.0.0.1", 4242, message, message_length);
+        return send_socket(socket_desc, message, message_length);
     }
     else if (upl_value != NULL)
     {
@@ -104,21 +138,6 @@ int main(int argc, char **argv)
         char *buffer_file;
         int errnum;
         size_t static_size = 13;
-
-        /* Parsing command line */
-        char *param_copy = strdup(upl_value);
-        char *filename_final = strtok(param_copy, "/");
-
-        while (filename_final != NULL)
-        {
-            param_copy = filename_final;
-            filename_final = strtok(NULL, "/");
-        }
-        printf(param_copy);
-        filename_final = param_copy;
-        int filename_len = strlen(filename_final);
-        printf("Filename : %s and filename_len : %d\n", filename_final, filename_len);
-        /* End Reading content of file */
 
         fp = fopen (upl_value, "rb");
         if (fp == NULL)
@@ -142,22 +161,27 @@ int main(int argc, char **argv)
         fread(buffer_file, file_size, 1 , fp);
         /* End reading content of file */
 
-        message_length = file_size + static_size + 2 + filename_len;
+        message_length = file_size + static_size;
        // message = malloc(message_length * sizeof (uint8_t));
         uint8_t message[message_length];
 
         message[0] = 1; // Set version
-        message[1] = 9; // Set message type
+        message[1] = 5; // Set message type
         message[2] = 0; // Set status code, it is 0 since fp != null
+<<<<<<< HEAD
         message[3] = 1; // Digest not handled yet
 
+=======
+        message[3] = 0; // Digest not handled yet 
+        
+>>>>>>> d24d7d3ce164e16596352658514d7a3704ee0e58
         /* Size of file on 64 bits */
 
         int power = 64 - 8;
         message[4] = file_size / pow(2, power);
         long long current_size = file_size;
 
-        for (int i = 5; i < 11; i++)
+        for (int i = 5; i < 11; i++) 
         {
             power -= 8;
             if (message[i - 1] == 0)
@@ -171,9 +195,8 @@ int main(int argc, char **argv)
         }
 
         message[11] = file_size - (message[10] * 256);
-
+        
         /* Debug logs */
-        /*
         printf("byte 4: %d\n", message[5]);
         printf("byte 5: %d\n", message[5]);
         printf("byte 6: %d\n", message[6]);
@@ -182,14 +205,12 @@ int main(int argc, char **argv)
         printf("byte 9: %d\n", message[9]);
         printf("byte 10: %d\n", message[10]);
         printf("byte 11: %d\n", message[11]);
-        */
 
         printf("Message length = %llu\n", message_length);
         /* End debug logs */
 
         /* Copying file content to buffer which will be send in the socket */
-        memcpy(message + static_size - 1, buffer_file, file_size);
-
+        memcpy(message + static_size - 1, buffer_file, file_size); 
 
         /* Digest value set to 0. Not implemented yet. */
         //message[file_size + static_size - 1] = 99;
@@ -220,7 +241,8 @@ int main(int argc, char **argv)
 
         fclose(fp);
         free(buffer_file);
-        return send_ucast_msg("127.0.0.1", 4242, message, message_length);
+        return send_socket(socket_desc, message, message_length);
     }
     return 0;
 }
+
