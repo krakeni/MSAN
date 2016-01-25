@@ -2,7 +2,7 @@
 
 CFLAGS	 = -std=gnu99 -Wall -Wextra -O0 -ggdb3 -fstack-protector
 SSLLIB = -I/opt/ssl/include/ -L/opt/ssl/lib/ -lcrypto
-SRC=src/lib.c
+SRC=src/lib.c src/handlers.c
 OBJ=$(SRC:.c=.o)
 
 all: backend frontend interface

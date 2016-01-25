@@ -19,15 +19,8 @@
 
 #include "../include/rush.h"
 #include "../include/lib.h"
+#include "../include/handlers.h"
 
-typedef struct
-{
-    char const * unicast_bind_addr_str;
-    char const * unicast_bind_port_str;
-    char const * watched_dir;
-    size_t watched_dir_len;
-
-} rush_frontend_config;
 
 static void IF_FE_send_content_message(rush_frontend_config const * const config,
         int const conn_socket)
