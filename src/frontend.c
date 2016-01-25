@@ -522,6 +522,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		    //Vient de l'interface qui demande la liste des fichiers
 		    //Il faudra envoyer en multicast une requête de discover
 		    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
+        }
                 else if (type == rush_message_type_list_files_response)
                 {
                     // TYPE == 3
