@@ -263,6 +263,9 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		    // TYPE == 2
 		    // UNICAST RQST LIST OF FILES
 		    // FIXME
+		    //Vient de l'interface qui demande la liste des fichiers
+		    //Il faudra envoyer en multicast une requête de discover
+		    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
                 }
 		else if (type == rush_message_type_list_files_response)
 		{
@@ -361,6 +364,8 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		{
 		    // TYPE = 7
 		    // Back-end alive multicast message
+		    //Face à un alive message on stocke les IP qui ont répondu
+		    
 		}
                 else
                 {

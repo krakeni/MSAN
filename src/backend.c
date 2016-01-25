@@ -173,6 +173,7 @@ static void rush_backend_handle_dir_event(rush_backend_config const * const conf
 static int rush_backend_handle_new_connection(rush_backend_config const * const config,
         int const conn_socket)
 {
+    fprintf(stdout, "HANDLE_NEW_CONNECTION WITH SOCKET = %d\n", conn_socket);
     int result = EINVAL;
     uint8_t version = rush_message_version_none;
     ssize_t got = 0;
@@ -182,9 +183,9 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
     got = read(conn_socket,
             &version,
             sizeof version);
-
     if (got == sizeof version)
     {
+	printf("VERSION DU MESSAGE : %d\n", version);
         if (version == rush_message_version_1)
         {
             uint8_t type = rush_message_type_none;
@@ -193,7 +194,6 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                     &type,
                     sizeof type);
             printf("Type: %" PRIu8 "\n", type);
-
             if (got == sizeof type)
             {
                 if (type == rush_message_type_new_file)
@@ -205,6 +205,7 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                     // name
                     // digest
                     // FIXME
+		    printf("NEW FILE ...\n");
                 }
                 else if (type == rush_message_type_list_files)
                 {
@@ -225,6 +226,14 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 else if (type == rush_message_type_discover)
                 {
                     // TYPE == 8
+		    //On va répondre avec un alive en unicast
+		    printf("MESSAGE TYPE 8 RECU\n");
+		    struct sockaddr_in addr;
+		    socklen_t addr_size = sizeof(struct sockaddr_in);
+		    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
+		    char clientip[20];
+		    strcpy(clientip, inet_ntoa(addr.sin_addr));
+		    printf("l'ip du Front End qui a envoyé est : %s\n", clientip);
                 }
                 else
                 {
@@ -434,24 +443,16 @@ void rush_backend_bind_multicast_socket(int * const multicast_socket)
         perror("Adding multicast group error");
 }
 
-void rush_backend_handle_multicast_socket_event(int * const multicast_socket)
+static int rush_backend_handle_multicast_socket_event(rush_backend_config const *config, int multicast_socket)
 {
-    char databuf[1024];
-    int datalen = 0;
-    datalen = sizeof(databuf);
-    if(read(*multicast_socket, databuf, datalen) < 0)
-    {
-        perror("Reading datagram message error");
-        close(*multicast_socket);
-        exit(1);
-    }
-    else
-    {
-        printf("Reading datagram message...OK.\n");
-        printf("The message from multicast server is: \"%s\"\n", databuf);
-    }
-    close(*multicast_socket);
+    fprintf(stdout, "HANDLE_MULTICAST_SOCKET_EVENT\n");
+    int result = 0;
+    assert(config != NULL);
+    assert(multicast_socket >= 0);
 
+    result = rush_backend_handle_new_connection(config, multicast_socket);
+    //Il ne faut pas close la socket
+    return result;
 }
 
 
@@ -468,7 +469,7 @@ int main(void)
     config.watched_dir = "/tmp";
     config.watched_dir_len = strlen(config.watched_dir);
     config.unicast_bind_addr_str = "::";
-    config.unicast_bind_port_str = "4242";
+    config.unicast_bind_port_str = "4241";
 
     int result = rush_backend_watch_dir(config.watched_dir,
             &inotify_fd,
@@ -555,7 +556,7 @@ int main(void)
                                     {
                                         fprintf(stdout,
                                                 "Got multicast_socket event!\n");
-                                        rush_backend_handle_multicast_socket_event(&multicast_socket);
+                                        rush_backend_handle_multicast_socket_event(&config, multicast_socket);
                                     }
                                 }
                                 else if (result == 0)
