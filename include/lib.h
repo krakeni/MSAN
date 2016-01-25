@@ -18,7 +18,6 @@
 #include <sys/inotify.h>
 #include <sys/socket.h>
 #include <unistd.h>
-
 #include "rush.h"
 
 void send_mcast_msg(char *databuf, int datalen, uint16_t port, const char* mcast_group);
@@ -43,5 +42,9 @@ void send_mcast_alive(uint16_t port, const char* mcast_group);
 void send_mcast_disp_new_file(uint16_t port, const char* mcast_group, char *filename);
 
 void send_ucast_req_content_file(char *filename, uint16_t port, char *address);
+
+void hash_string_sha256(uint8_t hash[SHA256_DIGEST_LENGTH], char output[256]);
+
+void get_hash_sha256(char* path, char output[256]);
 
 #endif /* LIB_H */
