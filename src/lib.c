@@ -1,6 +1,6 @@
 #include "../include/lib.h"
 
-void send_mcast_msg(char *databuf, int datalen, uint16_t port, const char* mcast_group)
+void send_mcast_msg(uint8_t *databuf, int datalen, uint16_t port, const char* mcast_group)
 {
     struct in_addr Local_interface = (struct in_addr) { 0 };
     struct sockaddr_in mcast_sock = (struct sockaddr_in) { 0 };
@@ -26,10 +26,10 @@ void send_mcast_msg(char *databuf, int datalen, uint16_t port, const char* mcast
 
 void send_mcast_discover(uint16_t port, const char* mcast_group)
 {
-  char msg[2];
+  uint8_t msg[2];
   msg[0] = 1;
   msg[1] = 8;
-  send_mcast_msg(&msg, 2, port, mcast_group);
+  send_mcast_msg(msg, 2, port, mcast_group);
 }
 
 void hash_string_sha256(uint8_t hash[SHA256_DIGEST_LENGTH], char output[256])
@@ -200,7 +200,7 @@ int send_ucast_msg(char *address, int port, uint8_t *message, long long message_
 
 void send_mcast_request_list_all_files_msg(uint16_t port, const char* mcast_group)
 {
-    char msg[2];
+    uint8_t msg[2];
     msg[0] = 1;
     msg[1] = 2;
     send_mcast_msg(msg, 2, port, mcast_group);
@@ -208,7 +208,7 @@ void send_mcast_request_list_all_files_msg(uint16_t port, const char* mcast_grou
 
 void send_ucast_request_list_all_files_msg(char *address, int port)
 {
-    char msg[2];
+    uint8_t msg[2];
     msg[0] = 1;
     msg[1] = 2;
     send_ucast_msg(address, port, msg, 2);
@@ -286,30 +286,30 @@ void send_ucast_list_all_files(int nb_files, struct BE_file_info_list *infos, in
 
 void send_mcast_alive(uint16_t port, const char* mcast_group)
 {
-  char msg[2];
+  uint8_t msg[2];
   msg[0] = 1;
   msg[1] = 7;
-  send_mcast_msg(&msg, 2, port, mcast_group);
+  send_mcast_msg(msg, 2, port, mcast_group);
 }
 
 void send_mcast_disp_new_file(uint16_t port, const char* mcast_group, char *filename)
 {
     uint32_t msglen = 4;
     msglen += strlen(filename);
-    char msg[msglen];
+    uint8_t msg[msglen];
     msg[0] = 1;
     msg[1] = 6;
     uint16_t namelen = strlen(filename);
     memcpy(msg + 2, &namelen, 2);
     memcpy(msg + 4, filename, namelen);
-    send_mcast_msg(&msg, msglen, port, mcast_group);
+    send_mcast_msg(msg, msglen, port, mcast_group);
 }
 
 void send_ucast_req_content_file(char *filename, uint16_t port, char *address)
 {
     uint32_t msglen = 4;
     msglen += strlen(filename);
-    char msg[msglen];
+    uint8_t msg[msglen];
     msg[0] = 1;
     msg[1] = 4;
     uint16_t namelen = strlen(filename);
