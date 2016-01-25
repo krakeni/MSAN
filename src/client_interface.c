@@ -12,6 +12,26 @@
 #include <arpa/inet.h>
 #include <math.h>
 
+#include "../include/lib.h"
+
+#define DEBUG 1
+#ifdef DEBUG
+# define DEBUG_PRINT(x) printf x
+#else
+# define DEBUG_PRINT(x) do {} while (0)
+#endif
+
+
+char *FRONT_ADDRESS = "127.0.0.1";
+int FRONT_PORT = 4242;
+
+void option_help()
+{
+    printf("Usage : '-g file_name' to get file\n \
+   '-u file_name' to upload a file\n \
+   '-l' to get the list of all files\n");
+}
+
 int send_socket(int socket_desc, uint8_t *message, long long message_length)
 {
     if( send(socket_desc , message , message_length, 0) < 0)
@@ -24,14 +44,8 @@ int send_socket(int socket_desc, uint8_t *message, long long message_length)
 
 int main(int argc, char **argv)
 {
-    if (argc == 1)
-    {
-        printf("Usage : '-g file_name' to get file\n \
-       '-u file_name' to upload a file\n \
-       '-l' to get the list of all files\n");
-        return 1;
-    }
     /* GetOpt */
+
     int list_flag = 0;
     char *get_value = NULL;
     char *upl_value = NULL;
@@ -68,8 +82,17 @@ int main(int argc, char **argv)
         }
     for (index = optind; index < argc; index++)
         printf ("Non-option argument %s\n", argv[index]);
+
+    if (argc == 1 || (argc > 1 && (get_value == NULL && upl_value == NULL && list_flag == 0)))
+    {
+        option_help();
+        return 1;
+    }
+
     /* End GetOpt */
 
+
+    /* Socket */
 
     int socket_desc;
     struct sockaddr_in server;
@@ -78,13 +101,13 @@ int main(int argc, char **argv)
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
     {
-        printf("Could not create socket");
+        DEBUG_PRINT(("Could not create socket"));
     }
          
     /* Put the proxy address there */
-    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_addr.s_addr = inet_addr(FRONT_ADDRESS);
     server.sin_family = AF_INET;
-    server.sin_port = htons(4242);
+    server.sin_port = htons(FRONT_PORT);
  
     //Connect to remote server
     if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
@@ -94,16 +117,17 @@ int main(int argc, char **argv)
     }
      
     puts("Connected\n");
+
+    /* End Socket */
      
     long long  message_length = 0;
-//    uint8_t *message;
     if (get_value != NULL)
     {
         /* Get a file */
-        printf("Get file : %s\n", get_value);
+        DEBUG_PRINT(("Get file : %s\n", get_value));
         size_t filename_len = strlen(get_value);
-        size_t static_size = 4;
-        message_length = static_size + filename_len;
+        size_t static_message_size = 4;
+        message_length = static_message_size + filename_len;
         uint8_t message[message_length];
 
         message[0] = 1; // Set version
@@ -112,9 +136,9 @@ int main(int argc, char **argv)
         message[2] = (uint8_t)(filename_len / 256);
         message[3] = filename_len - message[2];
 
-        memcpy(message + static_size, get_value, filename_len);
+        memcpy(message + static_message_size, get_value, filename_len);
         for (size_t i = 0; i < (size_t)message_length; i++)
-            printf("%d\n", message[i]);
+            DEBUG_PRINT(("%d\n", message[i]));
         return send_socket(socket_desc, message, message_length);
     }
     else if (list_flag == 1)
@@ -125,62 +149,95 @@ int main(int argc, char **argv)
         message[0] = 1;
         message[1] = 2;
 
-        printf("List files\n");
+        DEBUG_PRINT(("List files\n"));
         return send_socket(socket_desc, message, message_length);
     }
     else if (upl_value != NULL)
     {
         /* Upload a file */
-        printf("Upload file : %s\n", upl_value);
+
+        DEBUG_PRINT(("Upload file : %s\n", upl_value));
         /* Reading content of file */
-        FILE *fp;
-        long long file_size;
-        char *buffer_file;
+        uint8_t version = 1;
+        uint8_t msg_type = 9;
+        uint8_t status_code = 0;
+        rush_digest_type digest_type = rush_digest_type_sha256;
+        long long content_len;
+        char *content;
+        char *digest_value;
         int errnum;
-        size_t static_size = 13;
+        FILE *fp;
+
+        /* Size of the message without Content, digest value and filename which are variable */
+        size_t static_message_size = 14;
+
+
 
         fp = fopen (upl_value, "rb");
+        /* Handle errors when opening file */
         if (fp == NULL)
         {
             /* Handle error case */
             errnum = errno;
-            printf("error code: %d\n", errnum);
-            return 0;
+            if (errnum > 0)
+            {
+                fprintf(stderr, "Can't access the file.\n Errno : %d", errnum);
+                return errnum;
+            }
+            fprintf(stderr, "Can't access the file");
+            return 1;
         }
 
         fseek(fp , 0L , SEEK_END);
-        file_size = ftell(fp);
+        content_len = ftell(fp);
         rewind(fp);
 
-        /* Debug logs */
-        printf("Size of uploaded file : %llu\n", file_size);
-        /* End debug logs */
+        DEBUG_PRINT(("Size of uploaded file : %llu\n", content_len));
 
 
-        buffer_file = calloc(1, file_size + 1);
-        fread(buffer_file, file_size, 1 , fp);
+        content = calloc(1, content_len + 1);
+        fread(content, content_len, 1 , fp);
+        fclose(fp);
         /* End reading content of file */
 
-        message_length = file_size + static_size;
-       // message = malloc(message_length * sizeof (uint8_t));
+        size_t digest_len = rush_digest_type_to_size(digest_type) * 2;
+        digest_value = malloc((int) digest_len * sizeof(char));
+        int digest_value_pos_in_buffer = 12 + content_len;
+        get_hash_sha256(upl_value, digest_value);
+
+        /* Parse filename */
+
+        char filename_final[255];
+
+        char *filename = strtok(upl_value, "/");
+
+        while (filename != NULL)
+        {
+            printf("%s\n", filename);
+            strcpy(filename_final, filename);
+            filename = strtok(NULL, "/");
+        }
+
+
         uint8_t message[message_length];
 
-        message[0] = 1; // Set version
-        message[1] = 5; // Set message type
-        message[2] = 0; // Set status code, it is 0 since fp != null
-        message[3] = 0; // Digest not handled yet 
-        
+        message[0] = version; 
+        message[1] = msg_type; 
+        message[2] = status_code; 
+        message[3] = digest_type; 
+
+        /* Content length parse */
         /* Size of file on 64 bits */
 
         int power = 64 - 8;
-        message[4] = file_size / pow(2, power);
-        long long current_size = file_size;
+        message[4] = (uint8_t) (content_len / pow(2, power));
+        long long current_size = content_len;
 
         for (int i = 5; i < 11; i++) 
         {
             power -= 8;
             if (message[i - 1] == 0)
-                message[i] = (file_size / pow(2, power));
+                message[i] = (content_len / pow(2, power));
             else
             {
                 current_size = current_size - (message[i - 1] * pow(2, power + 8));
@@ -189,29 +246,29 @@ int main(int argc, char **argv)
 
         }
 
-        message[11] = file_size - (message[10] * 256);
+        message[11] = content_len - (message[10] * 256);
         
-        /* Debug logs */
-        printf("byte 4: %d\n", message[5]);
-        printf("byte 5: %d\n", message[5]);
-        printf("byte 6: %d\n", message[6]);
-        printf("byte 7: %d\n", message[7]);
-        printf("byte 8: %d\n", message[8]);
-        printf("byte 9: %d\n", message[9]);
-        printf("byte 10: %d\n", message[10]);
-        printf("byte 11: %d\n", message[11]);
-
-        printf("Message length = %llu\n", message_length);
-        /* End debug logs */
-
         /* Copying file content to buffer which will be send in the socket */
-        memcpy(message + static_size - 1, buffer_file, file_size); 
 
-        /* Digest value set to 0. Not implemented yet. */
-        message[file_size + static_size] = 0;
+        uint16_t filename_len = strlen(filename_final);
+        memset(message + 12 + 1 + content_len, 0, 36);
+        message_length = content_len + static_message_size + digest_len + filename_len;
+        /* Copying in buffer */
+        memcpy(message + 12, content, content_len);
+        memcpy(message + digest_value_pos_in_buffer, digest_value, digest_len);
 
-        fclose(fp);
-        free(buffer_file);
+        message[digest_value_pos_in_buffer + digest_len] = filename_len / 256;
+        message[digest_value_pos_in_buffer + digest_len + 1] = filename_len - 
+            (message[content_len + static_message_size] * 256);
+
+        memcpy(message + digest_value_pos_in_buffer + digest_len + 2, filename_final, filename_len);
+
+        DEBUG_PRINT(("Message length = %llu\n", message_length));
+        for (int i = 0; i < message_length; i++)
+            DEBUG_PRINT(("byte %d :  %"PRIu8"\n", i, message[i]));
+
+
+        free(content);
         return send_socket(socket_desc, message, message_length);
     }
     return 0;
