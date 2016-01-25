@@ -19,15 +19,8 @@
 
 #include "../include/rush.h"
 #include "../include/lib.h"
+#include "../include/handlers.h"
 
-typedef struct
-{
-    char const * unicast_bind_addr_str;
-    char const * unicast_bind_port_str;
-    char const * watched_dir;
-    size_t watched_dir_len;
-
-} rush_frontend_config;
 
 void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
 {
