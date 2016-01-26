@@ -216,22 +216,25 @@ static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const
     memset(&buf, 0, 1024);
     recvfrom(conn_socket, buf, 1024, 0, (struct sockaddr *)&srcaddr, &addrlen);
     printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
+    char *source_address = inet_ntoa(srcaddr.sin_addr);
     //read(conn_socket, &buf, 1024);
 
     version = buf[0];
     type = buf[1];
     if (version == rush_message_version_1)
     {
-        if (type == rush_message_type_get_file)
+        if (type == rush_message_type_file_available_here)
         {
-            // TYPE 4
-        }
-        else if (type == rush_message_type_file_available_here)
-        {
+            FE_advertising_disponibility(conn_socket, buf); 
             //TYPE 6
         }
         else if (type == rush_message_type_alive)
         {
+            /* Front receives a keep alive from a backend, then answer to the backend with a type 2 */
+            FE_alive_message(conn_socket, buf, source_address);
+
+            /* FIXME Check that the message came from the backend */
+
             //TYPE 7
         }
     }

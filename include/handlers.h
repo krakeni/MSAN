@@ -36,4 +36,9 @@ void rush_bind_server_multicast_socket(int * const multicast_socket, int port, c
 
 void BE_advertise_file_handle(int const conn_socket);
 
+void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024]);
+
+void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024]); 
+
+void FE_alive_message(int const conn_socket, uint8_t buf[1024], char *address);
 #endif /* HANDLERS_H_ */
