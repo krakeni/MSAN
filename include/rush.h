@@ -16,7 +16,7 @@
 #define FRONTEND_PORT 4242
 //Changes this IP according to your Interface IP
 
-#define LOCAL_IFACE "192.168.1.75"
+#define LOCAL_IFACE "127.0.0.1"
 #define FE_MCAST_PORT 4242
 #define BE_MCAST_PORT 4242
 
