@@ -196,10 +196,12 @@ static void rush_backend_handle_new_connection_mcast(rush_frontend_config const 
         else if (type == rush_message_type_alive)
         {
             //TYPE 7
+	    BE_alive_message_handle(inet_ntoa(srcaddr.sin_addr));
         }
         else if (type == rush_message_type_discover)
         {
             //TYPE 8
+	    BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr));
         }
     }
 }
