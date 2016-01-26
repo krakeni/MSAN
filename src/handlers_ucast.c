@@ -108,23 +108,19 @@ void BE_FE_send_content_message(int const conn_socket)
         if (got == sizeof digest_type)
         {
             // content_len
-            long long content_len_net = 0;
+            uint64_t content_len_net = 0;
 
             got = read(conn_socket,
                     &content_len_net,
                     sizeof content_len_net);
-            printf("Content len net: %llu\n", content_len_net);
+            printf("Content len net: %" PRIu64 "\n", content_len_net);
             printf("sizeof Content len net: %lu\n", sizeof content_len_net);
             printf("got: %zu\n", got);
 
             if (got == sizeof content_len_net)
             {
-                uint32_t content_len_net_low = content_len_net;
-                uint32_t content_len_net_high = content_len_net >> 32;
-                uint32_t low_32 = ntohl(content_len_net_low);
-                uint32_t high_32 = ntohl(content_len_net_high);
+                uint64_t content_len = ntoh64(&content_len_net);
 
-                uint64_t content_len = (high_32 << 32) + low_32;
                 printf("Content len: %" PRIu64 "\n", content_len);
                 if (content_len_net == 0 && digest_type != rush_digest_type_none)
                 {
@@ -362,7 +358,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
         if (got == sizeof digest_type)
         {
             // content_len
-            long long content_len_net = 0;
+            uint64_t content_len_net = 0;
 
             got = read(conn_socket,
                     &content_len_net,
@@ -372,12 +368,8 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
 
             if (got == sizeof content_len_net)
             {
-                uint32_t content_len_net_low = content_len_net;
-                uint32_t content_len_net_high = content_len_net >> 32;
-                uint32_t low_32 = ntohl(content_len_net_low);
-                uint32_t high_32 = ntohl(content_len_net_high);
+                uint64_t content_len = ntoh64(&content_len_net);
 
-                uint64_t content_len = (high_32 << 32) + low_32;
                 printf("Content len: %" PRIu64 "\n", content_len);
                 if (content_len_net == 0 && digest_type != rush_digest_type_none)
                 {
@@ -391,7 +383,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
                     // MUST to be set to zero.
                     if (status == 0)
                     {
-                        char * content = malloc(content_len + 1);
+                        char *content = malloc((content_len + 1) * sizeof(char));
 
                         if (content != NULL)
                         {
@@ -400,7 +392,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
                                     content_len);
                             printf("Content: %s\n", content);
 
-                            if (got == (int)content_len)
+                            if (got == content_len)
                             {
                                 content[content_len] = '\0';
                                 uint8_t digest_len = rush_digest_type_to_size(digest_type); 
@@ -408,6 +400,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
                                 digest_len *= 2;
 
                                 char * digest = malloc((digest_len + 1) * sizeof (uint8_t));
+                                digest[digest_len] = '\0';
 
                                 if (digest != NULL)
                                 {
@@ -435,18 +428,19 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
                                             /* Get filename */
                                             filename_len = ntohs(filename_len_net);
                                             char *filename = malloc((filename_len + 1) * sizeof (char)); 
+
                                             got = read(conn_socket,
                                                     filename,
                                                     filename_len);
 
+                                            filename[filename_len] = '\0';
                                             printf("Filename_len : %"PRIu16"\n", filename_len);
                                             printf("Filename : %s\n", filename);
 
-                                            filename[filename_len] = '\0';
 
                                             /* Write in file */
 
-                                            FILE *file = fopen(filename, "w+");
+                                            FILE *file = fopen(filename, "wb");
                                             if (file == NULL)
                                             {
                                                 int errnum = errno;
@@ -454,13 +448,16 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
                                                 return;
                                             }
 
-                                            fputs(content, file);
+                                            fwrite(content, 1, content_len,  file);
                                             fclose(file);
 
 
                                             int hash_filename_len = strlen(HASH_DIR) + filename_len + 1;
                                             char *hash_filename = malloc(hash_filename_len * sizeof (char));
                                             hash_filename[hash_filename_len] = '\0';
+
+                                            printf("Hash_filename_len = %d(HASH_DIR) + %d(filename_len) + 1\n", strlen(HASH_DIR), filename_len);
+
 
                                             strcpy(hash_filename, HASH_DIR);
                                             strcat(hash_filename, filename);
@@ -486,6 +483,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
                                     {
                                         fprintf(stderr,
                                                 "Not enough data available for digest, skipping.\n");
+                                        fprintf(stderr, "Got = %d\n", got);
                                     }
 
                                     free(digest);
