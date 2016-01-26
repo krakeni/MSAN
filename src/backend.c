@@ -175,6 +175,8 @@ static void rush_backend_handle_new_connection_mcast(rush_frontend_config const 
 {
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
+    struct sockaddr_in srcaddr = { 0 };
+    socklen_t addrlen = sizeof(struct sockaddr_in);
 
     uint8_t buf[1024];
     memset(&buf, 0, 1024);
