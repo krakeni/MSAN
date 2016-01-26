@@ -1,6 +1,8 @@
 #ifndef HANDLERS_H_
 #define HANDLERS_H_
 
+#include <dirent.h>
+
 #include "rush.h"
 #include "lib.h"
 

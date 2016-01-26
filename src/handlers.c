@@ -76,7 +76,24 @@ void BE_advertise_file_handle(int const conn_socket)
 			    if (got == sizeof digest_len)
 			    {
 				digest[digest_len] = '\0';
-				// FIXME save name
+				// Save digest in /tmp/hash/
+				char* path = malloc(name_len + 11); // 11 = "/tmp/hash/
+				strcpy(path, "/tmp/hash/");
+				strcat(path, name);
+
+				FILE* file = fopen(path, "w+");
+
+				if (file != NULL)
+				{
+				    fwrite(digest, digest_len, 1, file);
+				    fclose(file);
+				    free(path);
+				}
+				else
+				{
+				    fprintf(stderr,
+					    "Error on saving file.\n");
+				}
 			    }
 			    else if (got == -1)
 			    {
@@ -95,10 +112,12 @@ void BE_advertise_file_handle(int const conn_socket)
 			{
 			    result = ENOMEM;
 			    fprintf(stderr,
-				    "Error allocatinf memory for digest of size %zu: %d\n",
+				    "Error allocating memory for digest of size %zu: %d\n",
 				    digest_len,
 				    result);
 			}
+			free(digest);
+			digest = NULL;
 		    }
 		    else if (got == -1)
 		    {
@@ -112,6 +131,8 @@ void BE_advertise_file_handle(int const conn_socket)
 			fprintf(stderr,
 				"Not enough data available, skipping.\n");
 		    }
+		    free(name);
+		    name = NULL;
 		}
 		else
 		{
@@ -139,7 +160,7 @@ void BE_advertise_file_handle(int const conn_socket)
 	{
 	    result = errno;
 	    fprintf(stderr,
-		    "Erro rreading content length of advertise file message: %d\n",
+		    "Error reading content length of advertise file message: %d\n",
 		    result);
 	}
 	else
@@ -344,14 +365,62 @@ void BE_FE_send_content_message(rush_backend_config const * const config,
                                     if (got == digest_len)
                                     {
                                         digest[digest_len] = '\0';
-                                        FILE * file = NULL;
-                                        file = fopen("test.txt", "w+");
+					// Save content of file
+					
+					// Find name of file
+					char* path = NULL;
+					DIR* dir;
+					struct dirent* d;
 
-                                        if (file != NULL)
-                                        {
-                                            fwrite(content, content_len, 1, file);
-                                        }
-                                        fclose(file);
+					if ((dir = opendir("/tmp/hash/")) != NULL)
+					{
+					    chdir("/tmp/hash/");
+					    while ((d = readdir(dir)) != NULL)
+					    {
+						if ((strcmp(d->d_name, ".") == 0) || (strcmp(d->d_name, "..") == 0))
+						    continue;
+						else
+						{
+						    FILE* tmp = fopen(d->d_name, "rb");
+
+						    if (tmp != NULL)
+						    {
+							fseek(tmp, 0, SEEK_END);
+							size_t hash_len = ftell(tmp);
+							char* hash = malloc(hash_len + 1);
+							rewind(tmp);
+							fread(hash, hash_len, 1, tmp);
+							printf("Content of file: %s\n", hash);
+
+							if (strcmp(hash, digest) == 0)
+							{
+							    path = malloc(strlen(d->d_name) + 6); // 6 = "/tmp/
+							    strcpy(path, "/tmp/");
+							    strcat(path, d->d_name);
+							    printf("This is the good file: %s\n", path);
+							}
+						    }
+						}
+					    }
+					    closedir(dir);
+					}
+
+					if (path != NULL)
+					{
+					    FILE * file = NULL;
+					    file = fopen(path, "w+");
+
+					    if (file != NULL)
+					    {
+						fwrite(content, content_len, 1, file);
+					    }
+					    fclose(file);
+					}
+					else
+					{
+					    fprintf(stderr,
+						    "Error find file.\n");
+					}
                                     }
                                     else if (got == -1)
                                     {
@@ -377,6 +446,8 @@ void BE_FE_send_content_message(rush_backend_config const * const config,
                                             digest_len,
                                             result);
                                 }
+				free(digest);
+				digest = NULL;
                             }
                             else if (got == -1)
                             {
@@ -402,6 +473,8 @@ void BE_FE_send_content_message(rush_backend_config const * const config,
                                     content_len,
                                     result);
                         }
+			free(content);
+			content = NULL;
                     }
                     else
                     {
