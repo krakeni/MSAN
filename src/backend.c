@@ -175,10 +175,14 @@ static void rush_backend_handle_new_connection_mcast(rush_frontend_config const 
 {
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
+    struct sockaddr_in srcaddr = { 0 };
+    socklen_t addrlen = sizeof(struct sockaddr_in);
 
     uint8_t buf[1024];
     memset(&buf, 0, 1024);
-    read(conn_socket, &buf, 1024);
+    recvfrom(conn_socket, buf, 1024, 0, (struct sockaddr *)&srcaddr, &addrlen);
+    printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
+    //read(conn_socket, &buf, 1024);
 
     version = buf[0];
     type = buf[1];
@@ -434,7 +438,7 @@ static int rush_backend_handle_multicast_socket_event(rush_backend_config const 
     assert(config != NULL);
     assert(multicast_socket >= 0);
 
-    result = rush_backend_handle_new_connection(config, multicast_socket);
+    rush_backend_handle_new_connection_mcast(config, multicast_socket);
     //Il ne faut pas close la socket
     return result;
 }
@@ -452,12 +456,12 @@ int main(void)
     config.watched_dir = "/tmp";
     config.watched_dir_len = strlen(config.watched_dir);
     config.unicast_bind_addr_str = "::";
-    config.unicast_bind_port_str = "4241";
+    config.unicast_bind_port_str = "4243";
 
     int result = rush_backend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
-
+    send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
     if (result == 0)
     {
         result = rush_backend_listen_on_unicast(config.unicast_bind_addr_str,
