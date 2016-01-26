@@ -219,7 +219,8 @@ void BE_FE_rqst_content_message(rush_backend_config const * const config,
 			"DEBUG: received request for file %s\n",
 			name);
 
-#warning FIXME: Some code has been deleted.
+		// FIXME
+		// Search name in directory
 
 	    }
 	    else if (got == -1)
