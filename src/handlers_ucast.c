@@ -108,23 +108,19 @@ void BE_FE_send_content_message(int const conn_socket)
         if (got == sizeof digest_type)
         {
             // content_len
-            long long content_len_net = 0;
+            uint64_t content_len_net = 0;
 
             got = read(conn_socket,
                     &content_len_net,
                     sizeof content_len_net);
-            printf("Content len net: %llu\n", content_len_net);
+            printf("Content len net: %" PRIu64 "\n", content_len_net);
             printf("sizeof Content len net: %lu\n", sizeof content_len_net);
             printf("got: %zu\n", got);
 
             if (got == sizeof content_len_net)
             {
-                uint32_t content_len_net_low = content_len_net;
-                uint32_t content_len_net_high = content_len_net >> 32;
-                uint32_t low_32 = ntohl(content_len_net_low);
-                uint32_t high_32 = ntohl(content_len_net_high);
+                uint64_t content_len = ntoh64(&content_len_net);
 
-                uint64_t content_len = (high_32 << 32) + low_32;
                 printf("Content len: %" PRIu64 "\n", content_len);
                 if (content_len_net == 0 && digest_type != rush_digest_type_none)
                 {
@@ -362,7 +358,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
         if (got == sizeof digest_type)
         {
             // content_len
-            long long content_len_net = 0;
+            uint64_t content_len_net = 0;
 
             got = read(conn_socket,
                     &content_len_net,
@@ -372,12 +368,8 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
 
             if (got == sizeof content_len_net)
             {
-                uint32_t content_len_net_low = content_len_net;
-                uint32_t content_len_net_high = content_len_net >> 32;
-                uint32_t low_32 = ntohl(content_len_net_low);
-                uint32_t high_32 = ntohl(content_len_net_high);
+                uint64_t content_len = ntoh64(&content_len_net);
 
-                uint64_t content_len = (high_32 << 32) + low_32;
                 printf("Content len: %" PRIu64 "\n", content_len);
                 if (content_len_net == 0 && digest_type != rush_digest_type_none)
                 {
