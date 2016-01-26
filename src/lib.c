@@ -21,7 +21,6 @@ void send_mcast_msg(uint8_t *databuf, int datalen, uint16_t port, const char* mc
     {
         perror("Sending datagram message error");
     }
-    close(msocket);
 }
 
 void send_mcast_discover(uint16_t port, const char* mcast_group)
