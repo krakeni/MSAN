@@ -40,4 +40,9 @@ void BE_alive_message_handle(char* ipsrc);
 
 void BE_discover_message_handle(char* ipsrc);
 
+void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024]);
+
+void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024]); 
+
+void FE_alive_message(int const conn_socket, uint8_t buf[1024], char *address);
 #endif /* HANDLERS_H_ */

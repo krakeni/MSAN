@@ -214,6 +214,45 @@ void BE_advertise_file_handle(int const conn_socket)
 }
 */
 
+void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
+{   
+    printf("Message type 4 multicast\n");
+    uint8_t *data = malloc(2 * sizeof(uint16_t));
+    char *filename; 
+
+    uint16_t filename_len;
+
+    data = (uint8_t *)&filename_len;
+    memcpy(data, &buffer[2], 2);
+    filename = malloc(filename_len + 1);
+
+    memcpy(filename, &buffer[4], filename_len);
+    filename[filename_len] = '\0';
+
+    printf("filename : %s\n filename_len : %"PRIu16"\n", filename, filename_len);
+}
+
+void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024])
+{
+    printf("Message type 6 multicast\n");
+    uint8_t *data = malloc(2 * sizeof(uint16_t));
+    char *filename; 
+
+    uint16_t filename_len;
+
+    data = (uint8_t *)&filename_len;
+    memcpy(data, &buf[2], 2);
+}
+
+void FE_alive_message(int const conn_socket, uint8_t buf[1024], char *address)
+{
+    uint8_t *message = malloc(2 * sizeof(uint8_t));
+    message[0] = 1;
+    message[1] = 2;
+
+    send_ucast_msg(address, BE_PORT, message, 2);
+}
+
 void BE_advertise_file_handle(uint8_t buffer[1024])
 {
     uint8_t* data;
