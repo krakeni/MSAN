@@ -2,6 +2,7 @@
 
 void BE_advertise_file_handle(int const conn_socket)
 {
+    printf("HERE I AM\n");
     int result = EINVAL;
     ssize_t got = 0;
 
@@ -75,7 +76,7 @@ void BE_advertise_file_handle(int const conn_socket)
 			    if (got == sizeof digest_len)
 			    {
 				digest[digest_len] = '\0';
-				// FIXME
+				// FIXME save name
 			    }
 			    else if (got == -1)
 			    {

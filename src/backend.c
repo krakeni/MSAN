@@ -191,9 +191,11 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
         {
             uint8_t type = rush_message_type_none;
 
+	    printf("HERE I AM\n");
             got = read(conn_socket,
                     &type,
                     sizeof type);
+	    printf("HERE I AM\n");
             printf("Type: %" PRIu8 "\n", type);
             if (got == sizeof type)
 	    {
