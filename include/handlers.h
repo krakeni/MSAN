@@ -34,7 +34,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
 
 void rush_bind_server_multicast_socket(int * const multicast_socket, int port, char *mcast_group);
 
-void BE_advertise_file_handle(int const conn_socket);
+void BE_advertise_file_handle(uint8_t buffer[1024]);
 
 void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024]);
 

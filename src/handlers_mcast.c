@@ -28,6 +28,8 @@ void rush_bind_server_multicast_socket(int * const multicast_socket, int port, c
 
 static char *HASH_DIR = "test/";
 
+
+/*
 void BE_advertise_file_handle(int const conn_socket)
 {
     printf("HERE I AM\n");
@@ -210,6 +212,7 @@ void BE_advertise_file_handle(int const conn_socket)
 		"Not enough data available, skipping.\n");
     }
 }
+*/
 
 void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
 {   
@@ -246,4 +249,42 @@ void FE_alive_message(int const conn_socket, uint8_t buf[1024], char *address)
     message[1] = 2;
 
     send_ucast_msg(address, BE_PORT, message, 2);
+void BE_advertise_file_handle(uint8_t buffer[1024])
+{
+    uint8_t* data;
+    size_t static_size = 13;
+
+    uint16_t name_len = 0;
+    data = (uint8_t *)&name_len;
+    memcpy(data, &buffer[2], 2);
+    printf("Name len: %" PRIu16 "\n", name_len);
+
+    uint64_t content_len = 0;
+    data =  (uint8_t *)&content_len;
+    memcpy(data, &buffer[4], 8);
+    printf("Content len: %" PRIu64 "\n", content_len);
+
+    uint8_t digest_type = buffer[12];
+    printf("Digest type: %" PRIu8 "\n", digest_type);
+
+    char* name = malloc(name_len + 1);
+    memcpy(name, &buffer[13], name_len);
+    name[name_len] = '\0';
+    printf("Name: %s\n", name);
+
+    size_t digest_len = rush_digest_type_to_size(digest_type);
+    char* digest = malloc(digest_len + 1);
+    memcpy(digest, &buffer[static_size + name_len], digest_len);
+    digest[digest_len + 1] = '\0';
+    printf("Digest: %s\n", digest);
+}
+
+void BE_alive_message(void)
+{
+    // get ip
+}
+
+void BE_discover_message(void)
+{
+    // send_mcast_alive(port, mcast_group);
 }
