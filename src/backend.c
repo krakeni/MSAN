@@ -170,6 +170,35 @@ static void rush_backend_handle_dir_event(rush_backend_config const * const conf
     while (finished == false);
 }
 
+static void rush_backend_handle_new_connection_mcast(rush_frontend_config const * const config,
+        int const conn_socket)
+{
+    uint8_t version = rush_message_version_none;
+    uint8_t type = rush_message_type_none;
+
+    uint8_t buf[1024];
+    memset(&buf, 0, 1024);
+    read(conn_socket, &buf, 1024);
+
+    version = buf[0];
+    type = buf[1];
+    if (version == rush_message_version_1)
+    {
+        if (type == rush_message_type_new_file)
+        {
+            // TYPE 1
+        }
+        else if (type == rush_message_type_alive)
+        {
+            //TYPE 7
+        }
+        else if (type == rush_message_type_discover)
+        {
+            //TYPE 8
+        }
+    }
+}
+
 
 static int rush_backend_handle_new_connection(rush_backend_config const * const config,
         int const conn_socket)

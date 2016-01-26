@@ -218,13 +218,9 @@ static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const
     type = buf[1];
     if (version == rush_message_version_1)
     {
-        if (type == rush_message_type_new_file)
+        if (type == rush_message_type_get_file)
         {
-            // TYPE 1
-        }
-        else if (type == rush_message_type_get_file)
-        {
-            // TYPE 5
+            // TYPE 4
         }
         else if (type == rush_message_type_file_available_here)
         {
@@ -233,10 +229,6 @@ static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const
         else if (type == rush_message_type_alive)
         {
             //TYPE 7
-        }
-        else if (type == rush_message_type_discover)
-        {
-            //TYPE 8
         }
     }
 }
