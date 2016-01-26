@@ -30,4 +30,6 @@ void BE_FE_rqst_content_message(rush_backend_config const * const config,
 void BE_FE_send_content_message(rush_backend_config const * const config,
         int const conn_socket);
 
+void rush_bind_server_multicast_socket(int * const multicast_socket, int port, char *mcast_group);
+
 #endif /* HANDLERS_H_ */
