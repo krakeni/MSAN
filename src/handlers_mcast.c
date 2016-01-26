@@ -26,7 +26,7 @@ void rush_bind_server_multicast_socket(int * const multicast_socket, int port, c
         perror("Adding multicast group error");
 }
 
-static char *HASH_DIR = "test/";
+// static char *HASH_DIR = "test/";
 
 
 /*
@@ -237,19 +237,54 @@ void BE_advertise_file_handle(uint8_t buffer[1024])
     name[name_len] = '\0';
     printf("Name: %s\n", name);
 
-    size_t digest_len = rush_digest_type_to_size(digest_type);
+    size_t digest_len = rush_digest_type_to_size(digest_type) * 2;
     char* digest = malloc(digest_len + 1);
     memcpy(digest, &buffer[static_size + name_len], digest_len);
-    digest[digest_len + 1] = '\0';
+    digest[digest_len] = '\0';
     printf("Digest: %s\n", digest);
+
+    // Save digest in /tmp/hash/
+    char* path = malloc(name_len + 11); // 11 = "/tmp/hash/
+    strcpy(path, "/tmp/hash/"); // HASH_DIR
+    strcat(path, name);
+
+    FILE* file = fopen(path, "w+");
+
+    if (file != NULL)
+    {
+	fwrite(digest, digest_len, 1, file);
+	fclose(file);
+	free(path);
+    }
+    else
+    {
+	fprintf(stderr,
+		"Error on saving file.\n");
+    }
 }
 
-void BE_alive_message(void)
+void BE_alive_message_handle(char* ipsrc)
 {
-    // get ip
+    // TYPE == 7
+    // FIXME Bind port replication
+    if (strcmp(ipsrc, "239.42.3.1") == 0)
+    {
+	send_mcast_request_list_all_files_msg(BE_REP_PORT, ipsrc);
+    }
 }
 
-void BE_discover_message(void)
+void BE_discover_message_handle(char* ipsrc)
 {
-    // send_mcast_alive(port, mcast_group);
+    // TYPE == 8
+    int port = 0;
+    if (strcmp(ipsrc, "239.42.3.1") == 0)
+    {
+	port = BE_MCAST_PORT;
+    }
+    else if (strcmp(ipsrc, "239.42.3.2") == 0)
+    {
+	port = FE_MCAST_PORT;
+    }
+    send_mcast_alive(port, ipsrc);
 }
+

@@ -189,21 +189,6 @@ static void rush_frontend_handle_dir_event(rush_frontend_config const * const co
     while (finished == false);
 }
 
-static int BE_alive_message(/*rush_frontend_config const * const config,*/
-        int const conn_socket)
-{
-    int result = 0;
-    //On va récupérer l'IP de la machine qui a répondu et lui uploader le fichier
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(struct sockaddr_in);
-    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
-    char clientip[20];
-    strcpy(clientip, inet_ntoa(addr.sin_addr));
-    printf("l'ip du Back End qui a répondu alive est : %s\n", clientip);
-
-    return result;
-}
-
 static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const * const config,
         int const conn_socket)
 {
@@ -297,7 +282,6 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
                 {
                     // TYPE = 7
                     // Back-end alive multicast message
-                    BE_alive_message(conn_socket);
                 }
                 else if (type == rush_message_new_file_from_front)
                 {
@@ -534,6 +518,7 @@ int main(void)
     int result = rush_frontend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
+    send_mcast_adv_file_msg(BE_MCAST_PORT, SAN_GROUP, "popo", 2);
 
     if (result == 0)
     {

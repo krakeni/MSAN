@@ -19,6 +19,7 @@
 #define LOCAL_IFACE "127.0.0.1"
 #define FE_MCAST_PORT 4243
 #define BE_MCAST_PORT 4321
+#define BE_REP_PORT 4040
 
 typedef struct
 {

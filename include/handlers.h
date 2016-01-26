@@ -36,4 +36,8 @@ void rush_bind_server_multicast_socket(int * const multicast_socket, int port, c
 
 void BE_advertise_file_handle(uint8_t buffer[1024]);
 
+void BE_alive_message_handle(char* ipsrc);
+
+void BE_discover_message_handle(char* ipsrc);
+
 #endif /* HANDLERS_H_ */
