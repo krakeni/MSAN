@@ -137,7 +137,7 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
                                             got = read(conn_socket, filename, filename_len);
                                             printf(filename);
 
-                                        printf("Got :%d and filename : %d\n", got, sizeof filename - 1);
+                                            printf("Got :%d and filename : %d\n", got, sizeof filename - 1);
                                             if (got == sizeof filename)
                                             {
 
@@ -260,7 +260,7 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
                 "Not enough data available for status code, skipping.\n");
     }
 }
-    
+
 void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
 {
     struct in_addr Local_interface = (struct in_addr) { 0 };
@@ -444,19 +444,68 @@ static int BE_alive_message(/*rush_frontend_config const * const config,*/
     return result;
 }
 
+static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const * const config,
+        int const conn_socket)
+{
+    uint8_t version = rush_message_version_none;
+    uint8_t type = rush_message_type_none;
+
+    uint8_t buf[1024];
+    memset(&buf, 0, 1024);
+    read(conn_socket, &buf, 1024);
+
+    version = buf[0];
+    type = buf[1];
+    if (version == rush_message_version_1)
+    {
+        if (type == rush_message_type_new_file)
+        {
+            // TYPE 1
+        }
+        else if (type == rush_message_type_get_file)
+        {
+            // TYPE 5
+        }
+        else if (type == rush_message_type_file_available_here)
+        {
+            //TYPE 6
+        }
+        else if (type == rush_message_type_alive)
+        {
+            //TYPE 7
+        }
+        else if (type == rush_message_type_discover)
+        {
+            //TYPE 8
+        }
+    }
+}
+
 static int rush_frontend_handle_new_connection(rush_frontend_config const * const config,
         int const conn_socket)
 {
     int result = EINVAL;
     uint8_t version = rush_message_version_none;
+    uint8_t tmp[1024];
+    memset(&tmp, 0, 1024);
     ssize_t got = 0;
     assert(config != NULL);
     assert(conn_socket >= 0);
 
     got = read(conn_socket,
-            &version,
-            sizeof version);
+            &tmp,
+            1024);
 
+    version = tmp[0];
+    uint8_t msg_type = tmp[1];
+    for (int i = 0; i < 256; i += 4)
+    {
+        printf("%d %d %d %d \n", tmp[i], tmp[i+1], tmp[i+2], tmp[i+3]);
+    }
+
+    printf("Version : %"PRIu8"\n", version);
+    printf("msg_type : %"PRIu8"\n", msg_type);
+    return 0;
     if (got == sizeof version)
     {
         if (version == rush_message_version_1)
@@ -469,15 +518,15 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 
             if (got == sizeof type)
             {
-		if (type == rush_message_type_list_files)
-		{
-		    // TYPE == 2
-		    // UNICAST RQST LIST OF FILES
-		    // FIXME
-		    //Vient de l'interface qui demande la liste des fichiers
-		    //Il faudra envoyer en multicast une requête de discover
-		    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
-		}
+                if (type == rush_message_type_list_files)
+                {
+                    // TYPE == 2
+                    // UNICAST RQST LIST OF FILES
+                    // FIXME
+                    //Vient de l'interface qui demande la liste des fichiers
+                    //Il faudra envoyer en multicast une requête de discover
+                    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
+                }
                 else if (type == rush_message_type_list_files_response)
                 {
                     // TYPE == 3
@@ -575,6 +624,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
                 {
                     // TYPE = 7
                     // Back-end alive multicast message
+                    BE_alive_message(conn_socket);
                 }
                 else if (type == rush_message_new_file_from_front)
                 {
@@ -584,20 +634,20 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 
 
                 }
-		else if (type == rush_message_type_file_available_here)
-		{
-		    // TYPE = 6
-		    // Back-end multicast message advertising the disponibility of a file
+                else if (type == rush_message_type_file_available_here)
+                {
+                    // TYPE = 6
+                    // Back-end multicast message advertising the disponibility of a file
 
-		    printf("HERE I AM\n");
-		}
-		else if (type == rush_message_type_alive)
-		{
-		    // TYPE = 7
-		    // Back-end alive multicast message
-		    //Face à un alive message on stocke les IP qui ont répondu
-		    
-		}
+                    printf("HERE I AM\n");
+                }
+                else if (type == rush_message_type_alive)
+                {
+                    // TYPE = 7
+                    // Back-end alive multicast message
+                    //Face à un alive message on stocke les IP qui ont répondu
+
+                }
                 else
                 {
                     fprintf(stderr,
@@ -806,23 +856,15 @@ void rush_frontend_bind_multicast_socket(int * const multicast_socket)
         perror("Adding multicast group error");
 }
 
-void rush_frontend_handle_multicast_socket_event(int * const multicast_socket)
+static int rush_frontend_handle_multicast_socket_event(rush_frontend_config const *config, int multicast_socket)
 {
-    char databuf[1024];
-    int datalen = 0;
-    datalen = sizeof(databuf);
-    if(read(*multicast_socket, databuf, datalen) < 0)
-    {
-        perror("Reading datagram message error");
-        close(*multicast_socket);
-        exit(1);
-    }
-    else
-    {
-        printf("Reading datagram message...OK.\n");
-        printf("The message from multicast server is: \"%s\"\n", databuf);
-    }
-    close(*multicast_socket);
+    int result = 0;
+    assert(config != NULL);
+    assert(multicast_socket >= 0);
+
+    result = rush_frontend_handle_new_connection(config, multicast_socket);
+
+    return result;
 
 }
 
@@ -840,7 +882,7 @@ int main(void)
     config.watched_dir_len = strlen(config.watched_dir);
     config.unicast_bind_addr_str = "::";
     config.unicast_bind_port_str = "4242";
-    
+
     int result = rush_frontend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
@@ -926,7 +968,9 @@ int main(void)
                                     {
                                         fprintf(stdout,
                                                 "Got multicast_socket event!\n");
-                                        rush_frontend_handle_multicast_socket_event(&multicast_socket);
+                                        rush_frontend_handle_multicast_socket_event(
+                                                &config, 
+                                                multicast_socket);
                                     }
                                 }
                                 else if (result == 0)

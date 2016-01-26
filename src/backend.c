@@ -93,7 +93,7 @@ static int rush_backend_handle_new_file(rush_backend_config const * const config
 
         if (result > 0)
         {
-	    printf("HERE I AM\n");
+            printf("HERE I AM\n");
 #warning FIXME: Some code has been deleted.
 
             free(path);
@@ -186,25 +186,25 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
             sizeof version);
     if (got == sizeof version)
     {
-	printf("VERSION DU MESSAGE : %d\n", version);
+        printf("VERSION DU MESSAGE : %d\n", version);
         if (version == rush_message_version_1)
         {
             uint8_t type = rush_message_type_none;
 
-	    printf("HERE I AM\n");
+            printf("HERE I AM\n");
             got = read(conn_socket,
                     &type,
                     sizeof type);
-	    printf("HERE I AM\n");
+            printf("HERE I AM\n");
             printf("Type: %" PRIu8 "\n", type);
             if (got == sizeof type)
-	    {
-		if (type == rush_message_type_new_file)
-		{
-		    // TYPE == 1
-		    BE_advertise_file_handle(conn_socket);
-		}
-		else if (type == rush_message_type_list_files)
+            {
+                if (type == rush_message_type_new_file)
+                {
+                    // TYPE == 1
+                    BE_advertise_file_handle(conn_socket);
+                }
+                else if (type == rush_message_type_list_files)
                 {
                     // TYPE == 2
                     // UNICAST RQST LIST OF FILES
@@ -212,8 +212,8 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 }
                 else if (type == rush_message_type_get_file)
                 {
-		    // TYPE == 4
-		    BE_FE_rqst_content_message(config, conn_socket);
+                    // TYPE == 4
+                    BE_FE_rqst_content_message(config, conn_socket);
                 }
                 else if (type == rush_message_type_get_file_response)
                 {
@@ -223,14 +223,14 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 else if (type == rush_message_type_discover)
                 {
                     // TYPE == 8
-		    //On va répondre avec un alive en unicast
-		    printf("MESSAGE TYPE 8 RECU\n");
-		    struct sockaddr_in addr;
-		    socklen_t addr_size = sizeof(struct sockaddr_in);
-		    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
-		    char clientip[20];
-		    strcpy(clientip, inet_ntoa(addr.sin_addr));
-		    printf("l'ip du Front End qui a envoyé est : %s\n", clientip);
+                    //On va répondre avec un alive en unicast
+                    printf("MESSAGE TYPE 8 RECU\n");
+                    struct sockaddr_in addr;
+                    socklen_t addr_size = sizeof(struct sockaddr_in);
+                    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
+                    char clientip[20];
+                    strcpy(clientip, inet_ntoa(addr.sin_addr));
+                    printf("l'ip du Front End qui a envoyé est : %s\n", clientip);
                 }
                 else
                 {
@@ -472,6 +472,7 @@ int main(void)
             &inotify_fd,
             &dir_inotify_fd);
 
+    send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
     if (result == 0)
     {
         result = rush_backend_listen_on_unicast(config.unicast_bind_addr_str,
