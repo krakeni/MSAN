@@ -1,4 +1,30 @@
 #include "../include/handlers.h"
+#include "../include/rush.h"
+
+void rush_bind_server_multicast_socket(int * const multicast_socket, int port, char *mcast_group)
+{
+    struct sockaddr_in localSock = (struct sockaddr_in) { 0 };
+    struct ip_mreq group;
+
+    *multicast_socket = socket(AF_INET, SOCK_DGRAM, 0);
+    if (*multicast_socket < 0)
+        perror("Opening datagram socket error");
+    int reuse = 1;
+    if(setsockopt(*multicast_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0)
+        perror("Setting SO_REUSEADDR error");
+    memset((char *) &localSock, 0, sizeof(localSock));
+    localSock.sin_family = AF_INET;
+    localSock.sin_port = htons(port);
+    localSock.sin_addr.s_addr = INADDR_ANY;
+
+    if(bind(*multicast_socket, (struct sockaddr*)&localSock, sizeof(localSock)))
+        perror("Binding datagram socket error");
+
+    group.imr_multiaddr.s_addr = inet_addr(mcast_group);
+    group.imr_interface.s_addr = inet_addr(LOCAL_IFACE);
+    if(setsockopt(*multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
+        perror("Adding multicast group error");
+}
 
 static char *HASH_DIR = "test/";
 

@@ -21,7 +21,6 @@
 #include "../include/lib.h"
 #include "../include/handlers.h"
 
-
 void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
 {
     struct in_addr Local_interface = (struct in_addr) { 0 };
@@ -237,7 +236,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		    // FIXME
 		    //Vient de l'interface qui demande la liste des fichiers
 		    //Il faudra envoyer en multicast une requête de discover
-		    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
+		    send_mcast_discover(BE_MCAST_PORT, SAN_GROUP);
 		}
                 else if (type == rush_message_type_list_files_response)
                 {
@@ -542,49 +541,16 @@ static int rush_frontend_listen_on_unicast(char const * const unicast_bind_addr_
     return result;
 }
 
-void rush_frontend_bind_multicast_socket(int * const multicast_socket)
+static int rush_frontend_handle_multicast_socket_event(rush_frontend_config const *config, int multicast_socket)
 {
-    struct sockaddr_in localSock = (struct sockaddr_in) { 0 };
-    struct ip_mreq group;
+    fprintf(stdout, "HANDLE_MULTICAST_SOCKET_EVENT\n");
+    int result = 0;
+    assert(config != NULL);
+    assert(multicast_socket >= 0);
 
-    *multicast_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (*multicast_socket < 0)
-        perror("Opening datagram socket error");
-    int reuse = 1;
-    if(setsockopt(*multicast_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0)
-        perror("Setting SO_REUSEADDR error");
-    memset((char *) &localSock, 0, sizeof(localSock));
-    localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(FE_MCAST_PORT);
-    localSock.sin_addr.s_addr = INADDR_ANY;
-
-    if(bind(*multicast_socket, (struct sockaddr*)&localSock, sizeof(localSock)))
-        perror("Binding datagram socket error");
-
-    group.imr_multiaddr.s_addr = inet_addr(FRONTEND_GROUP);
-    group.imr_interface.s_addr = inet_addr(LOCAL_IFACE);
-    if(setsockopt(*multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
-        perror("Adding multicast group error");
-}
-
-void rush_frontend_handle_multicast_socket_event(int * const multicast_socket)
-{
-    char databuf[1024];
-    int datalen = 0;
-    datalen = sizeof(databuf);
-    if(read(*multicast_socket, databuf, datalen) < 0)
-    {
-        perror("Reading datagram message error");
-        close(*multicast_socket);
-        exit(1);
-    }
-    else
-    {
-        printf("Reading datagram message...OK.\n");
-        printf("The message from multicast server is: \"%s\"\n", databuf);
-    }
-    close(*multicast_socket);
-
+    result = rush_frontend_handle_new_connection(config, multicast_socket);
+    //Il ne faut pas close la socket
+    return result;
 }
 
 int main(void)
@@ -595,7 +561,7 @@ int main(void)
     int dir_inotify_fd = -1;
 
     int multicast_socket = -1;
-    rush_frontend_bind_multicast_socket(&multicast_socket);
+    rush_bind_server_multicast_socket(&multicast_socket, FE_MCAST_PORT, FRONTEND_GROUP);
 
     config.watched_dir = "/tmp";
     config.watched_dir_len = strlen(config.watched_dir);
@@ -687,7 +653,7 @@ int main(void)
                                     {
                                         fprintf(stdout,
                                                 "Got multicast_socket event!\n");
-                                        rush_frontend_handle_multicast_socket_event(&multicast_socket);
+                                        rush_frontend_handle_multicast_socket_event(&config, multicast_socket);
                                     }
                                 }
                                 else if (result == 0)
@@ -735,6 +701,8 @@ int main(void)
 
             close(unicast_socket);
             unicast_socket = -1;
+	    close(multicast_socket);
+            multicast_socket = -1;
         }
         else
         {

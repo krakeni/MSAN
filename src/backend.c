@@ -415,31 +415,6 @@ static int rush_backend_listen_on_unicast(char const * const unicast_bind_addr_s
     return result;
 }
 
-void rush_backend_bind_multicast_socket(int * const multicast_socket)
-{
-    struct sockaddr_in localSock = (struct sockaddr_in) { 0 };
-    struct ip_mreq group;
-
-    *multicast_socket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (*multicast_socket < 0)
-        perror("Opening datagram socket error");
-    int reuse = 1;
-    if(setsockopt(*multicast_socket, SOL_SOCKET, SO_REUSEADDR, (char *)&reuse, sizeof(reuse)) < 0)
-        perror("Setting SO_REUSEADDR error");
-    memset((char *) &localSock, 0, sizeof(localSock));
-    localSock.sin_family = AF_INET;
-    localSock.sin_port = htons(BE_MCAST_PORT);
-    localSock.sin_addr.s_addr = INADDR_ANY;
-
-    if(bind(*multicast_socket, (struct sockaddr*)&localSock, sizeof(localSock)))
-        perror("Binding datagram socket error");
-
-    group.imr_multiaddr.s_addr = inet_addr(SAN_GROUP);
-    group.imr_interface.s_addr = inet_addr(LOCAL_IFACE);
-    if(setsockopt(*multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
-        perror("Adding multicast group error");
-}
-
 static int rush_backend_handle_multicast_socket_event(rush_backend_config const *config, int multicast_socket)
 {
     fprintf(stdout, "HANDLE_MULTICAST_SOCKET_EVENT\n");
@@ -452,7 +427,6 @@ static int rush_backend_handle_multicast_socket_event(rush_backend_config const 
     return result;
 }
 
-
 int main(void)
 {
     rush_backend_config config = (rush_backend_config) { 0 };
@@ -461,7 +435,7 @@ int main(void)
     int dir_inotify_fd = -1;
 
     int multicast_socket = -1;
-    rush_backend_bind_multicast_socket(&multicast_socket);
+    rush_bind_server_multicast_socket(&multicast_socket, BE_MCAST_PORT, SAN_GROUP);
 
     config.watched_dir = "/tmp";
     config.watched_dir_len = strlen(config.watched_dir);
@@ -601,6 +575,9 @@ int main(void)
 
             close(unicast_socket);
             unicast_socket = -1;
+	    close(multicast_socket);
+            multicast_socket = -1;
+
         }
         else
         {
