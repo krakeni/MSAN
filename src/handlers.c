@@ -386,9 +386,7 @@ void BE_FE_send_content_message(int const conn_socket)
 					    chdir("/tmp/hash/"); // HASH_DIR
 					    while ((d = readdir(dir)) != NULL)
 					    {
-						if ((strcmp(d->d_name, ".") == 0) || (strcmp(d->d_name, "..") == 0))
-						    continue;
-						else
+						if (d->d_type == DT_REG)
 						{
 						    FILE* tmp = fopen(d->d_name, "rb");
 
@@ -613,23 +611,7 @@ void IF_FE_send_content_message(rush_frontend_config const * const config, int c
                             if (got == (int)content_len)
                             {
                                 content[content_len] = '\0';
-                                uint8_t digest_len = 0;
-
-                                switch (digest_type)
-                                {
-                                    case rush_digest_type_sha1:
-                                        digest_len = RUSH_DIGEST_SHA1_SIZE;
-                                        break;
-                                    case rush_digest_type_sha256:
-                                        digest_len = RUSH_DIGEST_SHA256_SIZE;
-                                        break;
-                                    case rush_digest_type_blake2b:
-                                        digest_len = RUSH_DIGEST_BLAKE2B_SIZE;
-                                        break;
-                                    case rush_digest_type_none:
-                                        digest_len = 0;
-                                        break;
-                                }
+                                uint8_t digest_len = rush_digest_type_to_size(digest_type); 
                                 /* Chars are encoded on 2 bytes so a 32 bytes hash will have 4 caracters. */
                                 digest_len *= 2;
 
