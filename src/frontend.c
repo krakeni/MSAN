@@ -634,6 +634,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		    // TYPE = 6
 		    // Back-end multicast message advertising the disponibility of a file
 
+		    printf("HERE I AM\n");
 		}
 		else if (type == rush_message_type_alive)
 		{

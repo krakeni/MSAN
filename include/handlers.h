@@ -22,6 +22,8 @@ typedef struct
 
 } rush_frontend_config;
 
+void BE_advertise_file_handle(int const conn_socket);
+
 void BE_FE_rqst_content_message(rush_backend_config const * const config,
 	int const conn_socket);
 
