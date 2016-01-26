@@ -138,31 +138,45 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
 
                                         if (got == sizeof filename_len)
                                         {
+                                            char *filename = malloc((filename_len + 1) * sizeof (char));
+                                            char *hashname = malloc((filename_len + 6) * sizeof (char));
 
-                                            /* Get filename */
-                                            filename_len = ntohs(filename_len_net);
-                                            char *filename = malloc((filename_len + 1) * sizeof (char)); 
-                                            got = read(conn_socket,
-                                                    filename,
-                                                    filename_len);
+                                            got = read(conn_socket, filename, filename_len);
+                                            printf(filename);
 
-                                            printf("Filename_len : %"PRIu16"\n", filename_len);
-                                            printf("Filename : %s\n", filename);
+                                            printf("Got : %d and filename : %d\n", got, sizeof filename - 1);
+                                            
+                                            if (got == sizeof filename)
+                                            {
+                                                strcpy(hashname, filename);
+                                                strcat(hashname, ".hash");
+                                                hashname[filename_len + 6] = '\0';
+                                                filename[filename_len] = '\0';
 
                                             filename[filename_len] = '\0';
 
-                                            /* Write in file */
+                                                /*FILE * hash = NULL;
+                                                hash = fopen(hashname, "w+");
+                                                printf("HashFileName : %s\n", hashname);
 
-                                            FILE *file = fopen(filename, "w+");
-                                            if (file == NULL)
-                                            {
-                                                int errnum = errno;
-                                                fprintf(stderr, "Can't access the file. Reason : \n errno : %d", errnum);
-                                                return;
+                                        
+*/
+                                                FILE *file = fopen(filename, "w+");
+                                                if (file != NULL)
+                                                {
+                                                    fwrite(content, content_len, 1, file);
+                                                    fputs(content, file);
+                                                }
+/*
+                                                if (hash != NULL)
+                                                {
+                                                    fwrite(digest, digest_len, 1, hash);
+                                                }*/
+
+                                                //fclose(hash);
+                                                fclose(file);
                                             }
 
-                                            fputs(content, file);
-                                            fclose(file);
 
                                             //FIXME
                                             /* Write in DB */
@@ -275,7 +289,6 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
         fprintf(stderr,
                 "Not enough data available for status code, skipping.\n");
     }
-
 }
 
 void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
@@ -446,34 +459,6 @@ static void rush_frontend_handle_dir_event(rush_frontend_config const * const co
     while (finished == false);
 }
 
-static int BE_advertise_file_handle(/*rush_frontend_config const * const config,*/
-        int const conn_socket)
-{
-    int result = 0;
-    uint16_t name_len = 0;
-
-    int got = read(conn_socket,
-            &name_len,
-            sizeof name_len);
-    if (got == sizeof name_len)
-    {
-        char name[name_len];
-        got = read(conn_socket,
-                &name,
-                sizeof(name));
-        if (got == name_len)
-        {
-            //Il faut faire quoi ?
-        }
-        else
-        {
-            result = errno;
-            fprintf(stderr, "Error, the name's lengh is not as long as specified");
-        }
-    }
-    return result;
-}
-
 static int BE_alive_message(/*rush_frontend_config const * const config,*/
         int const conn_socket)
 {
@@ -522,7 +507,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		    //Vient de l'interface qui demande la liste des fichiers
 		    //Il faudra envoyer en multicast une requête de discover
 		    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
-        }
+		}
                 else if (type == rush_message_type_list_files_response)
                 {
                     // TYPE == 3

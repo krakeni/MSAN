@@ -217,7 +217,11 @@ int main(int argc, char **argv)
             strcpy(filename_final, filename);
             filename = strtok(NULL, "/");
         }
+        
+        /* Copying file content to buffer which will be send in the socket */
 
+        uint16_t filename_len = strlen(filename_final);
+        message_length = content_len + static_message_size + digest_len + filename_len;
 
         uint8_t message[message_length];
 
@@ -247,15 +251,8 @@ int main(int argc, char **argv)
         }
 
         message[11] = content_len - (message[10] * 256);
-        
-        /* Copying file content to buffer which will be send in the socket */
 
         /* Copying in buffer */
-        uint16_t filename_len = strlen(filename_final);
-        memset(message + 13 + content_len, 0, 36);
-
-        message_length = content_len + static_message_size + digest_len + filename_len;
-
         memcpy(message + 12, content, content_len);
 
         memcpy(message + digest_value_pos_in_buffer, digest_value, digest_len);
