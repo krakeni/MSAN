@@ -475,7 +475,6 @@ int main(void)
             &inotify_fd,
             &dir_inotify_fd);
 
-    send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
     if (result == 0)
     {
         result = rush_backend_listen_on_unicast(config.unicast_bind_addr_str,

@@ -238,26 +238,14 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 {
     int result = EINVAL;
     uint8_t version = rush_message_version_none;
-    uint8_t tmp[1024];
-    memset(&tmp, 0, 1024);
     ssize_t got = 0;
     assert(config != NULL);
     assert(conn_socket >= 0);
 
     got = read(conn_socket,
-            &tmp,
-            1024);
+            version,
+            sizeof version);
 
-    version = tmp[0];
-    uint8_t msg_type = tmp[1];
-    for (int i = 0; i < 256; i += 4)
-    {
-        printf("%d %d %d %d \n", tmp[i], tmp[i+1], tmp[i+2], tmp[i+3]);
-    }
-
-    printf("Version : %"PRIu8"\n", version);
-    printf("msg_type : %"PRIu8"\n", msg_type);
-    return 0;
     if (got == sizeof version)
     {
         if (version == rush_message_version_1)
