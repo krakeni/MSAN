@@ -209,10 +209,14 @@ static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const
 {
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
+    struct sockaddr_in srcaddr = { 0 };
+    socklen_t addrlen = sizeof(struct sockaddr_in);
 
     uint8_t buf[1024];
     memset(&buf, 0, 1024);
-    read(conn_socket, &buf, 1024);
+    recvfrom(conn_socket, buf, 1024, 0, (struct sockaddr *)&srcaddr, &addrlen);
+    printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
+    //read(conn_socket, &buf, 1024);
 
     version = buf[0];
     type = buf[1];
@@ -243,7 +247,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
     assert(conn_socket >= 0);
 
     got = read(conn_socket,
-            version,
+            &version,
             sizeof version);
 
     if (got == sizeof version)
@@ -507,7 +511,7 @@ static int rush_frontend_handle_multicast_socket_event(rush_frontend_config cons
     assert(config != NULL);
     assert(multicast_socket >= 0);
 
-    result = rush_frontend_handle_new_connection(config, multicast_socket);
+    rush_frontend_handle_new_connection_mcast(config, multicast_socket);
     //Il ne faut pas close la socket
     return result;
 }
