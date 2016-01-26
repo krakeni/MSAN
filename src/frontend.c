@@ -247,83 +247,12 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
                 else if (type == rush_message_type_get_file)
                 {
                     // TYPE == 4
-                    // UNICAST RQST CONTENT OF A FILE
-                    uint16_t name_len_net = 0;
-
-                    got = read(conn_socket,
-                            &name_len_net,
-                            sizeof name_len_net);
-
-                    if (got == sizeof name_len_net)
-                    {
-                        uint16_t const name_len = ntohs(name_len_net);
-                        char * name = malloc(name_len + 1);
-
-                        if (name != NULL)
-                        {
-                            got = read(conn_socket,
-                                    name,
-                                    name_len);
-
-                            if (got == name_len)
-                            {
-                                name[name_len] = '\0';
-
-                                fprintf(stdout,
-                                        "DEBUG: received request for file %s\n",
-                                        name);
-
-#warning FIXME: Some code has been deleted.
-
-                            }
-                            else if (got == -1)
-                            {
-                                result = errno;
-                                fprintf(stderr,
-                                        "Error reading name of get_file message: %d\n",
-                                        result);
-                            }
-                            else
-                            {
-                                fprintf(stderr,
-                                        "Not enough data available, skipping.\n");
-                            }
-
-                            free(name);
-                            name = NULL;
-                        }
-                        else
-                        {
-                            result = ENOMEM;
-                            fprintf(stderr,
-                                    "Error allocating memory for name of size %"PRIu16": %d\n",
-                                    name_len,
-                                    result);
-                        }
-                    }
-                    else if (got == -1)
-                    {
-                        result = errno;
-                        fprintf(stderr,
-                                "Error reading name length of get_file message: %d\n",
-                                result);
-                    }
-                    else
-                    {
-                        fprintf(stderr,
-                                "Not enough data available, skipping.\n");
-                    }
+		    BE_FE_rqst_content_message(conn_socket);
                 }
                 else if (type == rush_message_type_get_file_response)
                 {
                     // TYPE == 5
-                    // UNICAST MSG SEND CONTENT OF A FILE
-                    // status must not be negative
-                    // digest_type
-                    // content_len
-                    // content
-                    // digest
-                    // FIXME
+		    BE_FE_send_content_message(conn_socket);
                 }
                 else if (type == rush_message_type_file_available_here)
                 {

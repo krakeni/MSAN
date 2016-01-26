@@ -106,7 +106,7 @@ void BE_advertise_file_handle(int const conn_socket)
 				digest[digest_len] = '\0';
 				// Save digest in /tmp/hash/
 				char* path = malloc(name_len + 11); // 11 = "/tmp/hash/
-				strcpy(path, "/tmp/hash/");
+				strcpy(path, "/tmp/hash/"); // HASH_DIR
 				strcat(path, name);
 
 				FILE* file = fopen(path, "w+");
@@ -211,12 +211,10 @@ void BE_advertise_file_handle(int const conn_socket)
     }
 }
 
-void BE_FE_rqst_content_message(rush_backend_config const * const config,
-	int const conn_socket)
+void BE_FE_rqst_content_message(int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
-    assert(config != NULL);
 
     // TYPE == 4
     // UNICAST RQST CONTENT OF A FILE
@@ -289,12 +287,10 @@ void BE_FE_rqst_content_message(rush_backend_config const * const config,
 
 }
 
-void BE_FE_send_content_message(rush_backend_config const * const config,
-        int const conn_socket)
+void BE_FE_send_content_message(int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
-    assert(config != NULL);
 
     // TYPE == 5
     // UNICAST MSG SEND CONTENT OF A FILE
@@ -362,23 +358,7 @@ void BE_FE_send_content_message(rush_backend_config const * const config,
                             if (got == (int)content_len)
                             {
                                 content[content_len] = '\0';
-                                uint8_t digest_len = 0;
-
-                                switch (digest_type)
-                                {
-                                    case rush_digest_type_sha1:
-                                        digest_len = RUSH_DIGEST_SHA1_SIZE;
-                                        break;
-                                    case rush_digest_type_sha256:
-                                        digest_len = RUSH_DIGEST_SHA256_SIZE;
-                                        break;
-                                    case rush_digest_type_blake2b:
-                                        digest_len = RUSH_DIGEST_BLAKE2B_SIZE;
-                                        break;
-                                    case rush_digest_type_none:
-                                        digest_len = 0;
-                                        break;
-                                }
+                                uint8_t digest_len = rush_digest_type_to_size(digest_type);
 
                                 char * digest = malloc((digest_len + 1) * sizeof (uint8_t));
 
@@ -401,9 +381,9 @@ void BE_FE_send_content_message(rush_backend_config const * const config,
 					DIR* dir;
 					struct dirent* d;
 
-					if ((dir = opendir("/tmp/hash/")) != NULL)
+					if ((dir = opendir("/tmp/hash/")) != NULL) // HASH_DIR
 					{
-					    chdir("/tmp/hash/");
+					    chdir("/tmp/hash/"); // HASH_DIR
 					    while ((d = readdir(dir)) != NULL)
 					    {
 						if ((strcmp(d->d_name, ".") == 0) || (strcmp(d->d_name, "..") == 0))

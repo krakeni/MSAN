@@ -213,12 +213,12 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 else if (type == rush_message_type_get_file)
                 {
 		    // TYPE == 4
-		    BE_FE_rqst_content_message(config, conn_socket);
+		    BE_FE_rqst_content_message(conn_socket);
                 }
                 else if (type == rush_message_type_get_file_response)
                 {
                     // TYPE == 5
-                    BE_FE_send_content_message(config, conn_socket);
+                    BE_FE_send_content_message(conn_socket);
                 }
                 else if (type == rush_message_type_discover)
                 {
