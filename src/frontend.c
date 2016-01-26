@@ -259,7 +259,8 @@ static void IF_FE_send_content_message(rush_frontend_config const * const config
         fprintf(stderr,
                 "Not enough data available for status code, skipping.\n");
     }
-
+}
+    
 void rush_frontend_send_mcast_msg_san(uint8_t *databuf, int datalen)
 {
     struct in_addr Local_interface = (struct in_addr) { 0 };
@@ -428,34 +429,6 @@ static void rush_frontend_handle_dir_event(rush_frontend_config const * const co
     while (finished == false);
 }
 
-static int BE_advertise_file_handle(/*rush_frontend_config const * const config,*/
-        int const conn_socket)
-{
-    int result = 0;
-    uint16_t name_len = 0;
-
-    int got = read(conn_socket,
-            &name_len,
-            sizeof name_len);
-    if (got == sizeof name_len)
-    {
-        char name[name_len];
-        got = read(conn_socket,
-                &name,
-                sizeof(name));
-        if (got == name_len)
-        {
-            //Il faut faire quoi ?
-        }
-        else
-        {
-            result = errno;
-            fprintf(stderr, "Error, the name's lengh is not as long as specified");
-        }
-    }
-    return result;
-}
-
 static int BE_alive_message(/*rush_frontend_config const * const config,*/
         int const conn_socket)
 {
@@ -504,6 +477,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
 		    //Vient de l'interface qui demande la liste des fichiers
 		    //Il faudra envoyer en multicast une requête de discover
 		    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
+		}
                 else if (type == rush_message_type_list_files_response)
                 {
                     // TYPE == 3
