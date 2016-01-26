@@ -218,6 +218,9 @@ int main(int argc, char **argv)
             filename = strtok(NULL, "/");
         }
 
+        uint16_t filename_len = strlen(filename_final);
+        message_length = content_len + static_message_size + digest_len + filename_len;
+
 
         uint8_t message[message_length];
 
@@ -250,9 +253,8 @@ int main(int argc, char **argv)
         
         /* Copying file content to buffer which will be send in the socket */
 
-        uint16_t filename_len = strlen(filename_final);
-        memset(message + 12 + 1 + content_len, 0, 36);
-        message_length = content_len + static_message_size + digest_len + filename_len;
+
+
         /* Copying in buffer */
         memcpy(message + 12, content, content_len);
         memcpy(message + digest_value_pos_in_buffer, digest_value, digest_len);
