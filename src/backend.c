@@ -230,12 +230,7 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
             printf("Type: %" PRIu8 "\n", type);
             if (got == sizeof type)
             {
-                if (type == rush_message_type_new_file)
-                {
-                    // TYPE == 1
-                    BE_advertise_file_handle(conn_socket);
-                }
-                else if (type == rush_message_type_list_files)
+                if (type == rush_message_type_list_files)
                 {
                     // TYPE == 2
                     // UNICAST RQST LIST OF FILES
@@ -250,18 +245,6 @@ static int rush_backend_handle_new_connection(rush_backend_config const * const 
                 {
                     // TYPE == 5
                     BE_FE_send_content_message(conn_socket);
-                }
-                else if (type == rush_message_type_discover)
-                {
-                    // TYPE == 8
-                    //On va répondre avec un alive en unicast
-                    printf("MESSAGE TYPE 8 RECU\n");
-                    struct sockaddr_in addr;
-                    socklen_t addr_size = sizeof(struct sockaddr_in);
-                    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
-                    char clientip[20];
-                    strcpy(clientip, inet_ntoa(addr.sin_addr));
-                    printf("l'ip du Front End qui a envoyé est : %s\n", clientip);
                 }
                 else
                 {
