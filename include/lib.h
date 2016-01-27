@@ -50,6 +50,6 @@ void send_ucast_req_content_file(char *filename, uint16_t port, char *address);
 
 void hash_string_sha256(uint8_t hash[SHA256_DIGEST_LENGTH], char output[256]);
 
-void get_hash_sha256(char* path, char output[256]);
+int get_hash_sha256(char* path, char output[256]);
 
 #endif /* LIB_H */

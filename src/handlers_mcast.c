@@ -43,7 +43,6 @@ void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
 
     printf("filename : %s\n filename_len : %"PRIu16"\n", filename, filename_len);
 
-
     //Send multicast request to frontend type 6
     //Backend advertises the disponibility of a file
     

@@ -61,7 +61,7 @@ void hash_string_sha256(uint8_t hash[SHA256_DIGEST_LENGTH], char output[256])
     output[255] = 0;
 }
 
-void get_hash_sha256(char* path, char output[256])
+int get_hash_sha256(char* path, char output[256])
 {
     FILE* file = fopen(path, "rb");
     if (file != NULL)
@@ -87,7 +87,12 @@ void get_hash_sha256(char* path, char output[256])
 	    fclose(file);
 	    free(buffer);
 	}
+    return 0;
     }
+
+    printf("File %s is missing \n", path);
+
+    return 1;
 }
 
 /* Type 1 Params:
@@ -107,8 +112,13 @@ void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
     size_t digest_len = rush_digest_type_to_size(digest_type) * 2;
     char* digest = malloc((digest_len + 1) * sizeof (uint8_t));
 
+    int present = 0;
+
     if (digest_type == 2)
-    	get_hash_sha256(path, digest);
+    	present = get_hash_sha256(path, digest);
+
+    if (!present)
+    {
 
     digest_len = strlen(digest);
 
@@ -139,6 +149,7 @@ void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
     printf("Filename size: %" PRIu16 "\n", name_len);
 
     uint64_t content_len = 0;
+
     FILE* file = fopen(path, "rb");
     if (file != NULL)
     {
@@ -181,6 +192,7 @@ void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
     free(token);
 
     send_mcast_msg(message, message_length, port, mcast_group);
+    }
 }
 
 int send_ucast_msg(char *address, int port, uint8_t *message, long long message_length)
