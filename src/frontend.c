@@ -187,13 +187,13 @@ static void rush_frontend_handle_new_connection_mcast(rush_server_config const *
     {
         if (type == rush_message_type_file_available_here)
         {
-            FE_advertising_disponibility(conn_socket, buf); 
+            FE_advertising_disponibility(conn_socket, buf);
             //TYPE 6
         }
         else if (type == rush_message_type_alive)
         {
             /* Front receives a keep alive from a backend, then answer to the backend with a type 2 */
-            FE_alive_message(conn_socket, buf, source_address);
+            FE_alive_message_handle(conn_socket, buf, source_address);
 
             /* FIXME Check that the message came from the backend */
 
@@ -234,7 +234,7 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
                     // FIXME
                     //Vient de l'interface qui demande la liste des fichiers
                     //Il faudra envoyer en multicast une requête de discover
-                    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
+                    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP, SRV_TYPE_FRONTEND);
                 }
                 else if (type == rush_message_type_list_files_response)
                 {
@@ -498,7 +498,6 @@ int main(void)
     int result = rush_frontend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
-    send_mcast_adv_file_msg(BE_MCAST_PORT, SAN_GROUP, "popo", 2);
 
     if (result == 0)
     {

@@ -41,12 +41,16 @@ void send_mcast_msg(uint8_t *databuf, int datalen, uint16_t port, const char* mc
     }
 }
 
-void send_mcast_discover(uint16_t port, const char* mcast_group)
+/*
+  Ajout d'un champ pour dire si le serveur est un back ou un frontend
+ */
+void send_mcast_discover(uint16_t port, const char* mcast_group, uint8_t srv_type)
 {
-  uint8_t msg[2];
+  uint8_t msg[3];
   msg[0] = 1;
   msg[1] = 8;
-  send_mcast_msg(msg, 2, port, mcast_group);
+  msg[2] = srv_type;
+  send_mcast_msg(msg, 3, port, mcast_group);
 }
 
 void hash_string_sha256(uint8_t hash[SHA256_DIGEST_LENGTH], char output[256])
@@ -202,7 +206,7 @@ int send_ucast_msg(char *address, int port, uint8_t *message, long long message_
     //Connect to remote server
     if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
     {
-        puts("connect error");
+        perror("connect error : ");
         return 1;
     }
 

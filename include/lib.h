@@ -27,7 +27,7 @@ uint64_t ntoh64(const uint64_t *input);
 
 void send_mcast_msg(uint8_t *databuf, int datalen, uint16_t port, const char* mcast_group);
 
-void send_mcast_discover(uint16_t port, const char* mcast_group);
+void send_mcast_discover(uint16_t port, const char* mcast_group, uint8_t srv_type);
 
 void send_mcast_adv_file_msg(uint16_t port, const char* mcast_group, char* path,
 			     const int digest_type);

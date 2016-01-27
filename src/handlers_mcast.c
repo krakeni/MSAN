@@ -244,8 +244,12 @@ void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024])
     memcpy(data, &buf[2], 2);
 }
 
-void FE_alive_message(int const conn_socket, uint8_t buf[1024], char *address)
+/*
+  Sur le FE pour gérer un message alive
+ */
+void FE_alive_message_handle(int const conn_socket, uint8_t buf[1024], char *address)
 {
+    printf("Sending unicast list all files message to the BACKEND with IP %s", address);
     uint8_t *message = malloc(2 * sizeof(uint8_t));
     message[0] = 1;
     message[1] = 2;
@@ -312,18 +316,22 @@ void BE_alive_message_handle(char* ipsrc)
     }
 }
 
-void BE_discover_message_handle(char* ipsrc)
+/*
+  On utilise cette fonction pour gérer un discover sur un backend
+ */
+void BE_discover_message_handle(char* ipsrc, uint8_t srv_type)
 {
     // TYPE == 8
     int port = 0;
-    if (strcmp(ipsrc, "239.42.3.1") == 0)
+    if (srv_type == SRV_TYPE_BACKEND)
     {
-	port = BE_MCAST_PORT;
+	printf("received discover from a %s\n", "BACK END");
+	send_mcast_alive(BE_MCAST_PORT, ipsrc);
     }
-    else if (strcmp(ipsrc, "239.42.3.2") == 0)
+    else if (srv_type == SRV_TYPE_FRONTEND)
     {
-	port = FE_MCAST_PORT;
+	printf("received discover from a %s\n", "FRONT END");
+	send_mcast_alive(FE_MCAST_PORT, ipsrc);
     }
-    send_mcast_alive(port, ipsrc);
 }
 

@@ -16,11 +16,15 @@
 #define FRONTEND_PORT 4242
 //Changes this IP according to your Interface IP
 
-#define LOCAL_IFACE "127.0.0.1"
+//#define LOCAL_IFACE "127.0.0.1"
+#define LOCAL_IFACE "192.168.1.115"
 #define FE_MCAST_PORT 4243
 #define BE_MCAST_PORT 4321
 #define BE_REP_PORT 4040
 
+//Server type
+#define SRV_TYPE_FRONTEND 0
+#define SRV_TYPE_BACKEND  1
 
 typedef struct
 {

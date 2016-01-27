@@ -203,7 +203,8 @@ static void rush_backend_handle_new_connection_mcast(rush_server_config const * 
         else if (type == rush_message_type_discover)
         {
             //TYPE 8
-	    BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr));
+	    uint8_t srv_type = buf[2];
+	    BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr), srv_type);
         }
     }
 }
@@ -242,6 +243,7 @@ static int rush_backend_handle_new_connection(rush_server_config const * const c
                     // TYPE == 2
                     // UNICAST RQST LIST OF FILES
                     // FIXME
+		    printf("Managing a list all files request\n");
                 }
                 else if (type == rush_message_type_get_file)
                 {
@@ -461,7 +463,7 @@ int main(void)
     config.watched_dir = "/tmp";
     config.watched_dir_len = strlen(config.watched_dir);
     config.unicast_bind_addr_str = "::";
-    config.unicast_bind_port_str = "4243";
+    config.unicast_bind_port_str = "4241";
 
     int result = rush_backend_watch_dir(config.watched_dir,
             &inotify_fd,
