@@ -1,7 +1,7 @@
 #include "../include/handlers.h"
 #include "../include/rush.h"
 
-void rush_bind_server_multicast_socket(int * const multicast_socket, int port, char *mcast_group)
+void* rush_bind_server_multicast_socket(int * const multicast_socket, int port, char *mcast_group)
 {
     struct sockaddr_in localSock = (struct sockaddr_in) { 0 };
     struct ip_mreq group;
@@ -30,7 +30,7 @@ void rush_bind_server_multicast_socket(int * const multicast_socket, int port, c
 
 
 /*
-void BE_advertise_file_handle(int const conn_socket)
+void* BE_advertise_file_handle(int const conn_socket)
 {
     printf("HERE I AM\n");
     int result = EINVAL;
@@ -214,7 +214,11 @@ void BE_advertise_file_handle(int const conn_socket)
 }
 */
 
-void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
+/* params
+int const conn_socket
+uint8_t buffer[1024]
+*/
+void* FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
 {   
     printf("Message type 4 multicast\n");
     uint8_t *data = malloc(2 * sizeof(uint16_t));
@@ -230,9 +234,14 @@ void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
     filename[filename_len] = '\0';
 
     printf("filename : %s\n filename_len : %"PRIu16"\n", filename, filename_len);
+    return NULL;
 }
 
-void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024])
+/* params
+int const conn_socket
+uint8_t buffer[1024]
+*/
+void* FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024])
 {
     printf("Message type 6 multicast\n");
     uint8_t *data = malloc(2 * sizeof(uint16_t));
@@ -242,18 +251,35 @@ void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024])
 
     data = (uint8_t *)&filename_len;
     memcpy(data, &buf[2], 2);
+    return NULL;
 }
 
-void FE_alive_message(int const conn_socket, uint8_t buf[1024], char *address)
+/* params
+int const conn_socket
+uint8_t buffer[1024]
+char *address
+*/
+void* FE_alive_message(void* args)
 {
-    uint8_t *message = malloc(2 * sizeof(uint8_t));
-    message[0] = 1;
-    message[1] = 2;
+    thread_args *arg = args;
+    char* address = arg->address;
 
-    send_ucast_msg(address, BE_PORT, message, 2);
+    pthread_mutex_lock(&(be_table.mutex));
+    char* temp;
+    temp = malloc(strlen(address) + 1);
+    strcpy(temp, address);		    
+    struct namelist *temp_l = malloc(sizeof(struct namelist));
+    temp_l->elt = temp;
+    temp_l->next_elt = NULL;
+    SGLIB_LIST_ADD(struct namelist, be_table.BE_alive, temp_l, next_elt);
+
+    pthread_mutex_unlock(&(be_table.mutex));
 }
 
-void BE_advertise_file_handle(uint8_t buffer[1024])
+/* params
+uint8_t buffer[1024]
+*/
+void* BE_advertise_file_handle(uint8_t buffer[1024])
 {
     uint8_t* data;
     size_t static_size = 13;
@@ -300,9 +326,13 @@ void BE_advertise_file_handle(uint8_t buffer[1024])
 	fprintf(stderr,
 		"Error on saving file.\n");
     }
+    return NULL;
 }
 
-void BE_alive_message_handle(char* ipsrc)
+/* params
+char* ipsrc
+*/
+void* BE_alive_message_handle(char* ipsrc)
 {
     // TYPE == 7
     // FIXME Bind port replication
@@ -310,20 +340,26 @@ void BE_alive_message_handle(char* ipsrc)
     {
 	send_mcast_request_list_all_files_msg(BE_REP_PORT, ipsrc);
     }
+    return NULL;
 }
 
-void BE_discover_message_handle(char* ipsrc)
+/* params
+char* ipsrc
+*/
+void* BE_discover_message_handle(void* args)
 {
+    args = args;
     // TYPE == 8
     int port = 0;
-    if (strcmp(ipsrc, "239.42.3.1") == 0)
+    /*if (strcmp(ipsrc, "239.42.3.1") == 0)
     {
 	port = BE_MCAST_PORT;
     }
     else if (strcmp(ipsrc, "239.42.3.2") == 0)
     {
 	port = FE_MCAST_PORT;
-    }
-    send_mcast_alive(port, ipsrc);
+    }*/
+    send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
+    pthread_exit(NULL);
 }
 

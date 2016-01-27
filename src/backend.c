@@ -175,11 +175,15 @@ static void rush_backend_handle_dir_event(rush_server_config const * const confi
 static void rush_backend_handle_new_connection_mcast(rush_server_config const * const config,
         int const conn_socket)
 {
+    // THREAD VARIABLE A REORGANISER APRES
+    pthread_t thread1;
+    be_table.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    be_table.BE_alive = NULL;
+
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
     struct sockaddr_in srcaddr = { 0 };
     socklen_t addrlen = sizeof(struct sockaddr_in);
-
     uint8_t buf[1024];
     memset(&buf, 0, 1024);
     recvfrom(conn_socket, buf, 1024, 0, (struct sockaddr *)&srcaddr, &addrlen);
@@ -203,11 +207,13 @@ static void rush_backend_handle_new_connection_mcast(rush_server_config const * 
         else if (type == rush_message_type_discover)
         {
             //TYPE 8
-	    BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr));
+	    //BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr));
+            if(pthread_create(&thread1, NULL, BE_discover_message_handle, NULL) == -1) {
+                perror("Error in pthread_create");
         }
     }
 }
-
+}
 
 static int rush_backend_handle_new_connection(rush_server_config const * const config,
         int const conn_socket)

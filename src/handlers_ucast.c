@@ -3,7 +3,7 @@
 
 static char *HASH_DIR = "test/";
 
-void BE_FE_rqst_content_message(int const conn_socket)
+void* BE_FE_rqst_content_message(int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
@@ -76,10 +76,11 @@ void BE_FE_rqst_content_message(int const conn_socket)
 	fprintf(stderr,
 		"Not enough data available, skipping.\n");
     }
+    return NULL;
 
 }
 
-void BE_FE_send_content_message(int const conn_socket)
+void* BE_FE_send_content_message(int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
@@ -325,10 +326,11 @@ void BE_FE_send_content_message(int const conn_socket)
         fprintf(stderr,
                 "Not enough data available for status code, skipping.\n");
     }
+    return NULL;
 
 }
 
-void IF_FE_send_content_message(rush_server_config const * const config, int const conn_socket)
+void* IF_FE_send_content_message(rush_server_config const * const config, int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
@@ -577,5 +579,14 @@ void IF_FE_send_content_message(rush_server_config const * const config, int con
         fprintf(stderr,
                 "Not enough data available for status code, skipping.\n");
     }
+    return NULL;
 
+}
+
+void* FE_list_files_BE(void* args)
+{
+    send_mcast_discover(BE_MCAST_PORT, SAN_GROUP);
+    sleep(1);
+
+    pthread_exit(NULL);
 }

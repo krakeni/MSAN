@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 //Lib for the lists and other structures
 #include "sglib.h"
 
@@ -21,6 +22,12 @@
 #define BE_MCAST_PORT 4321
 #define BE_REP_PORT 4040
 
+typedef struct
+{
+    int const conn_socket;
+    uint8_t buffer[1024];
+    char* address;
+} thread_args;
 
 typedef struct
 {
@@ -53,6 +60,14 @@ struct namelist {
     char *elt;
     struct namelist *next_elt;
 };
+
+typedef struct 
+{
+    struct namelist *BE_alive;
+    struct namelist *FE_alive;
+    pthread_mutex_t mutex;
+} shared_BE_table;
+shared_BE_table be_table;
 
 typedef enum
 {

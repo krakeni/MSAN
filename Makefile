@@ -1,6 +1,6 @@
 # -*- Makefile -*-
 
-CFLAGS	 = -std=gnu99 -Wall -Wextra -O0 -ggdb3 -fstack-protector
+CFLAGS	 = -std=gnu99 -Wall -Wextra -O0 -ggdb3 -fstack-protector -lpthread
 SSLLIB = -I/opt/ssl/include/ -L/opt/ssl/lib/ -lcrypto
 SRC=src/lib.c src/handlers_mcast.c src/handlers_ucast.c
 OBJ=$(SRC:.c=.o)
