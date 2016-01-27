@@ -189,54 +189,38 @@ static void rush_frontend_handle_dir_event(rush_server_config const * const conf
     while (finished == false);
 }
 
-static int BE_alive_message(/*rush_server_config const * const config,*/
-        int const conn_socket)
-{
-    int result = 0;
-    //On va récupérer l'IP de la machine qui a répondu et lui uploader le fichier
-    struct sockaddr_in addr;
-    socklen_t addr_size = sizeof(struct sockaddr_in);
-    result = getpeername(conn_socket, (struct sockaddr *)&addr, &addr_size);
-    char clientip[20];
-    strcpy(clientip, inet_ntoa(addr.sin_addr));
-    printf("l'ip du Back End qui a répondu alive est : %s\n", clientip);
-
-    return result;
-}
-
 static void rush_frontend_handle_new_connection_mcast(rush_server_config const * const config,
         int const conn_socket)
 {
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
+    struct sockaddr_in srcaddr = { 0 };
+    socklen_t addrlen = sizeof(struct sockaddr_in);
 
     uint8_t buf[1024];
     memset(&buf, 0, 1024);
-    read(conn_socket, &buf, 1024);
+    recvfrom(conn_socket, buf, 1024, 0, (struct sockaddr *)&srcaddr, &addrlen);
+    printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
+    char *source_address = inet_ntoa(srcaddr.sin_addr);
+    //read(conn_socket, &buf, 1024);
 
     version = buf[0];
     type = buf[1];
     if (version == rush_message_version_1)
     {
-        if (type == rush_message_type_new_file)
+        if (type == rush_message_type_file_available_here)
         {
-            // TYPE 1
-        }
-        else if (type == rush_message_type_get_file)
-        {
-            // TYPE 5
-        }
-        else if (type == rush_message_type_file_available_here)
-        {
+            FE_advertising_disponibility(conn_socket, buf); 
             //TYPE 6
         }
         else if (type == rush_message_type_alive)
         {
+            /* Front receives a keep alive from a backend, then answer to the backend with a type 2 */
+            FE_alive_message(conn_socket, buf, source_address);
+
+            /* FIXME Check that the message came from the backend */
+
             //TYPE 7
-        }
-        else if (type == rush_message_type_discover)
-        {
-            //TYPE 8
         }
     }
 }
@@ -246,26 +230,14 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
 {
     int result = EINVAL;
     uint8_t version = rush_message_version_none;
-    uint8_t tmp[1024];
-    memset(&tmp, 0, 1024);
     ssize_t got = 0;
     assert(config != NULL);
     assert(conn_socket >= 0);
 
     got = read(conn_socket,
-            &tmp,
-            1024);
+            &version,
+            sizeof version);
 
-    version = tmp[0];
-    uint8_t msg_type = tmp[1];
-    for (int i = 0; i < 256; i += 4)
-    {
-        printf("%d %d %d %d \n", tmp[i], tmp[i+1], tmp[i+2], tmp[i+3]);
-    }
-
-    printf("Version : %"PRIu8"\n", version);
-    printf("msg_type : %"PRIu8"\n", msg_type);
-    return 0;
     if (got == sizeof version)
     {
         if (version == rush_message_version_1)
@@ -313,7 +285,6 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
                 {
                     // TYPE = 7
                     // Back-end alive multicast message
-                    BE_alive_message(conn_socket);
                 }
                 else if (type == rush_message_new_file_from_front)
                 {
@@ -527,7 +498,7 @@ static int rush_frontend_handle_multicast_socket_event(rush_server_config const 
     assert(config != NULL);
     assert(multicast_socket >= 0);
 
-    result = rush_frontend_handle_new_connection(config, multicast_socket);
+    rush_frontend_handle_new_connection_mcast(config, multicast_socket);
     //Il ne faut pas close la socket
     return result;
 }
@@ -550,6 +521,7 @@ int main(void)
     int result = rush_frontend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
+    send_mcast_adv_file_msg(BE_MCAST_PORT, SAN_GROUP, "popo", 2);
 
     if (result == 0)
     {
