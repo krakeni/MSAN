@@ -1,4 +1,5 @@
 #include "../include/lib.h"
+#include "../include/handlers.h"
 
 void send_mcast_msg(uint8_t *databuf, int datalen, uint16_t port, const char* mcast_group)
 {
@@ -221,6 +222,45 @@ struct BE_file_info_list *BE_file_info_list_create_node(BE_file_info element)
     return l;
 }
 
+
+/*
+  Forcément appelé sur le Backend car c lui qui a la liste des fichiers
+*/
+struct namelist *read_files_from_backend(const rush_server_config *config)
+{
+    DIR *watched_dir = opendir(config->watched_dir);
+    struct namelist *result = NULL;
+
+    if (!watched_dir)
+    {
+	//errorcase
+	fprintf(stderr, "The directory %s was not found or couldn't be opened\n", config->watched_dir);
+	return NULL;
+    }
+    else
+    {
+	struct dirent *dp = NULL;
+        do
+	{
+	    if ((dp = readdir(watched_dir)) != NULL)
+	    {
+		//Si notre dossier n'est pas . ou .. ou nul
+		if (dp->d_name && strcpy(dp->d_name, "..") && strcpy(dp->d_name, "."))
+		{
+		    char* temp;
+		    temp = malloc(strlen(dp->d_name) + 1);
+		    strcpy(temp, dp->d_name);		    
+		    struct namelist *temp_l = malloc(sizeof(struct namelist));
+		    temp_l->elt = temp;
+		    temp_l->next_elt = NULL;
+		    SGLIB_LIST_ADD(struct namelist, result, temp_l, next_elt);
+		}
+	    }
+	} while (dp);
+    }
+    return result;
+}
+
 /*
   Prend en paramètre une liste de BE_file_info, cas d'arrêt quand next_ptr vaut NULL
   Infos est une liste de BE_file_info qui contiennent les champs, pour chaque fichier,
@@ -278,6 +318,7 @@ void send_ucast_list_all_files(int nb_files, struct BE_file_info_list *infos, in
     send_ucast_msg(address, port, result, total_size);
     //On détruit notre liste qui ne sert plus à rien
     SGLIB_LIST_MAP_ON_ELEMENTS(struct BE_file_info_list, infos, tmp, next_elt, {
+	    free(tmp->elt.filename);
     	    free(tmp);
     	});
 }

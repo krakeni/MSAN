@@ -540,7 +540,7 @@ void BE_FE_send_content_message(int const conn_socket)
 
 }
 
-void IF_FE_send_content_message(rush_frontend_config const * const config, int const conn_socket)
+void IF_FE_send_content_message(rush_server_config const * const config, int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;

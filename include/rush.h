@@ -20,6 +20,16 @@
 #define FE_MCAST_PORT 4243
 #define BE_MCAST_PORT 4321
 
+
+typedef struct
+{
+    char const * unicast_bind_addr_str;
+    char const * unicast_bind_port_str;
+    char const * watched_dir;
+    size_t watched_dir_len;
+
+} rush_server_config;
+
 typedef struct
 {
     uint16_t name_len;
@@ -36,6 +46,11 @@ typedef struct
 struct BE_file_info_list {
     BE_file_info elt;
     struct BE_file_info_list *next_elt;
+};
+
+struct namelist {
+    char *elt;
+    struct namelist *next_elt;
 };
 
 typedef enum

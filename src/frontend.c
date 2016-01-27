@@ -92,7 +92,7 @@ static int rush_frontend_watch_dir(char const * const dir,
     return result;
 }
 
-static int rush_frontend_handle_new_file(rush_frontend_config const * const config,
+static int rush_frontend_handle_new_file(rush_server_config const * const config,
         char const * const filename)
 {
     int result = 0;
@@ -131,7 +131,7 @@ static int rush_frontend_handle_new_file(rush_frontend_config const * const conf
     return result;
 }
 
-static void rush_frontend_handle_dir_event(rush_frontend_config const * const config,
+static void rush_frontend_handle_dir_event(rush_server_config const * const config,
         int const inotify_fd)
 {
     static size_t const buffer_size = sizeof(struct inotify_event) + NAME_MAX + 1;
@@ -189,7 +189,7 @@ static void rush_frontend_handle_dir_event(rush_frontend_config const * const co
     while (finished == false);
 }
 
-static int BE_alive_message(/*rush_frontend_config const * const config,*/
+static int BE_alive_message(/*rush_server_config const * const config,*/
         int const conn_socket)
 {
     int result = 0;
@@ -204,7 +204,7 @@ static int BE_alive_message(/*rush_frontend_config const * const config,*/
     return result;
 }
 
-static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const * const config,
+static void rush_frontend_handle_new_connection_mcast(rush_server_config const * const config,
         int const conn_socket)
 {
     uint8_t version = rush_message_version_none;
@@ -241,7 +241,7 @@ static void rush_frontend_handle_new_connection_mcast(rush_frontend_config const
     }
 }
 
-static int rush_frontend_handle_new_connection(rush_frontend_config const * const config,
+static int rush_frontend_handle_new_connection(rush_server_config const * const config,
         int const conn_socket)
 {
     int result = EINVAL;
@@ -380,7 +380,7 @@ static int rush_frontend_handle_new_connection(rush_frontend_config const * cons
     return result;
 }
 
-static int rush_frontend_handle_socket_event(rush_frontend_config const * const config,
+static int rush_frontend_handle_socket_event(rush_server_config const * const config,
         int const unicast_socket)
 {
     int result = 0;
@@ -520,7 +520,7 @@ static int rush_frontend_listen_on_unicast(char const * const unicast_bind_addr_
     return result;
 }
 
-static int rush_frontend_handle_multicast_socket_event(rush_frontend_config const *config, int multicast_socket)
+static int rush_frontend_handle_multicast_socket_event(rush_server_config const *config, int multicast_socket)
 {
     fprintf(stdout, "HANDLE_MULTICAST_SOCKET_EVENT\n");
     int result = 0;
@@ -534,7 +534,7 @@ static int rush_frontend_handle_multicast_socket_event(rush_frontend_config cons
 
 int main(void)
 {
-    rush_frontend_config config = (rush_frontend_config) { 0 };
+    rush_server_config config = (rush_server_config) { 0 };
     int unicast_socket = -1;
     int inotify_fd = -1;
     int dir_inotify_fd = -1;
