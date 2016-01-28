@@ -82,24 +82,26 @@ void* alive_message_handle(void* args)
     char* address = t_args->address;
     uint8_t src_srv_type = t_args->src_srv_type;
 
-    pthread_mutex_lock(&(be_table.mutex));
     char* temp;
     temp = malloc(strlen(address) + 1);
-    strcpy(temp, address);		    
+    strcpy(temp, address);
     struct namelist *temp_l = malloc(sizeof(struct namelist));
     temp_l->elt = temp;
     temp_l->next_elt = NULL;
     if (src_srv_type == SRV_TYPE_BACKEND)
     {
 	printf("received alive from a %s\n", "BACK END");
-	SGLIB_LIST_ADD(struct namelist, be_table.BE_alive, temp_l, next_elt);
+	pthread_mutex_lock(&(alive_table.mutex));
+	SGLIB_LIST_ADD(struct namelist, alive_table.BE_alive, temp_l, next_elt);
+	pthread_mutex_unlock(&(alive_table.mutex));
     }
     else if (src_srv_type == SRV_TYPE_FRONTEND)
     {
+	pthread_mutex_lock(&(alive_table.mutex));
 	printf("received alive from a %s\n", "FRONT END");
-	SGLIB_LIST_ADD(struct namelist, be_table.FE_alive, temp_l, next_elt);
+	SGLIB_LIST_ADD(struct namelist, alive_table.FE_alive, temp_l, next_elt);
+	pthread_mutex_unlock(&(alive_table.mutex));
     }
-    pthread_mutex_unlock(&(be_table.mutex));
     return NULL;
 }
 

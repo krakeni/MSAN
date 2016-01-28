@@ -74,8 +74,8 @@ typedef struct
     struct namelist *BE_alive;
     struct namelist *FE_alive;
     pthread_mutex_t mutex;
-} shared_BE_table;
-shared_BE_table be_table;
+} shared_alive_table;
+shared_alive_table alive_table;
 
 typedef enum
 {

@@ -175,8 +175,8 @@ static void rush_backend_handle_new_connection_mcast(/* rush_server_config const
 {
     // THREAD VARIABLE A REORGANISER APRES
     pthread_t thread1;
-    be_table.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
-    be_table.BE_alive = NULL;
+    alive_table.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    alive_table.BE_alive = NULL;
 
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
