@@ -76,15 +76,11 @@ void* FE_advertising_disponibility(uint8_t buf[1024])
     return NULL;
 }
 
-/* params
-int const conn_socket
-uint8_t buffer[1024]
-char *address
-*/
-void* FE_alive_message(void* args)
+void* alive_message_handle(void* args)
 {
-    thread_args *arg = args;
-    char* address = arg->address;
+    thread_args* t_args = (thread_args*)args;
+    char* address = t_args->address;
+    uint8_t src_srv_type = t_args->src_srv_type;
 
     pthread_mutex_lock(&(be_table.mutex));
     char* temp;
@@ -93,8 +89,16 @@ void* FE_alive_message(void* args)
     struct namelist *temp_l = malloc(sizeof(struct namelist));
     temp_l->elt = temp;
     temp_l->next_elt = NULL;
-    SGLIB_LIST_ADD(struct namelist, be_table.BE_alive, temp_l, next_elt);
-
+    if (src_srv_type == SRV_TYPE_BACKEND)
+    {
+	printf("received alive from a %s\n", "BACK END");
+	SGLIB_LIST_ADD(struct namelist, be_table.BE_alive, temp_l, next_elt);
+    }
+    else if (src_srv_type == SRV_TYPE_FRONTEND)
+    {
+	printf("received alive from a %s\n", "FRONT END");
+	SGLIB_LIST_ADD(struct namelist, be_table.FE_alive, temp_l, next_elt);
+    }
     pthread_mutex_unlock(&(be_table.mutex));
     return NULL;
 }
@@ -155,36 +159,21 @@ void* BE_advertise_file_handle(uint8_t buffer[1024])
 /* params
 char* ipsrc
 */
-void* BE_alive_message_handle(char* ipsrc)
-{
-    // TYPE == 7
-    // FIXME Bind port replication
-    if (strcmp(ipsrc, "239.42.3.1") == 0)
-    {
-	send_mcast_request_list_all_files_msg(BE_REP_PORT, ipsrc);
-    }
-    return NULL;
-}
-
-/* params
-char* ipsrc
-*/
-void* BE_discover_message_handle(void* args)
+void* discover_message_handle(void* args)
 {
     thread_args* t_args = (thread_args*)args;
-    uint8_t srv_type = t_args->srv_type;
+    uint8_t src_srv_type = t_args->src_srv_type;
     // TYPE == 8
-    if (srv_type == SRV_TYPE_BACKEND)
+    if (src_srv_type == SRV_TYPE_BACKEND)
     {
 	printf("received discover from a %s\n", "BACK END");
-	send_mcast_alive(BE_MCAST_PORT, SAN_GROUP);
+	send_mcast_alive(BE_MCAST_PORT, SAN_GROUP, t_args->srv_type);
     }
-    else if (srv_type == SRV_TYPE_FRONTEND)
+    else if (src_srv_type == SRV_TYPE_FRONTEND)
     {
 	printf("received discover from a %s\n", "FRONT END");
-	send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
+	send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP, t_args->srv_type);
     }
-    send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
     pthread_exit(NULL);
 }
 

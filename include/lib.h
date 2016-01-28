@@ -42,7 +42,7 @@ struct BE_file_info_list *BE_file_info_list_create_node(BE_file_info element);
 
 void send_mcast_list_all_files(int nb_files, struct BE_file_info_list *infos, int port, char *address);
 
-void send_mcast_alive(uint16_t port, const char* mcast_group);
+void send_mcast_alive(uint16_t port, const char* mcast_group, uint8_t srv_type);
 
 void send_mcast_disp_new_file(uint16_t port, const char* mcast_group, char *filename);
 

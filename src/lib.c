@@ -358,12 +358,13 @@ void send_ucast_list_all_files(struct BE_file_info_list *infos, int port, char *
 }
 
 
-void send_mcast_alive(uint16_t port, const char* mcast_group)
+void send_mcast_alive(uint16_t port, const char* mcast_group, uint8_t srv_type)
 {
-  uint8_t msg[2];
+  uint8_t msg[3];
   msg[0] = 1;
   msg[1] = 7;
-  send_mcast_msg(msg, 2, port, mcast_group);
+  msg[2] = srv_type;
+  send_mcast_msg(msg, 3, port, mcast_group);
 }
 
 void send_mcast_disp_new_file(uint16_t port, const char* mcast_group, char *filename)

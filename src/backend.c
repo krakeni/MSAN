@@ -211,7 +211,8 @@ static void rush_backend_handle_new_connection_mcast(/* rush_server_config const
 	    /* uint8_t srv_type = buf[2]; */
 	    /* discover_message_handle(ipsrc, srv_type); */
 	    //BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr));
-            if(pthread_create(&thread1, NULL, BE_discover_message_handle, &args) == -1) {
+	    args.src_srv_type = buf[2];
+            if(pthread_create(&thread1, NULL, discover_message_handle, &args) == -1) {
                 perror("Error in pthread_create");
         }
     }
