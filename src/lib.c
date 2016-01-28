@@ -300,7 +300,7 @@ struct namelist *read_files_from_backend(const rush_server_config *config)
   Infos est une liste de BE_file_info qui contiennent les champs, pour chaque fichier,
   qui permettront l'ajout dans un message type 3
 */
-void send_ucast_list_all_files(int nb_files, struct BE_file_info_list *infos, int port, char *address)
+void send_ucast_list_all_files(struct BE_file_info_list *infos, int port, char *address)
 {
     //La taille totale de notre message donc de notre buffer (en octets)
     long long total_size = 2 + 4;

@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 //Lib for the lists and other structures
 #include "sglib.h"
 
@@ -25,6 +26,15 @@
 //Server type
 #define SRV_TYPE_FRONTEND 0
 #define SRV_TYPE_BACKEND  1
+
+typedef struct
+{
+    int const conn_socket;
+    uint8_t buffer[1024];
+    char* address;
+    char *ipsrc;
+    uint8_t srv_type;
+} thread_args;
 
 typedef struct
 {
@@ -57,6 +67,14 @@ struct namelist {
     char *elt;
     struct namelist *next_elt;
 };
+
+typedef struct 
+{
+    struct namelist *BE_alive;
+    struct namelist *FE_alive;
+    pthread_mutex_t mutex;
+} shared_BE_table;
+shared_BE_table be_table;
 
 typedef enum
 {

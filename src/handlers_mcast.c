@@ -1,7 +1,7 @@
 #include "../include/handlers.h"
 #include "../include/rush.h"
 
-void rush_bind_server_multicast_socket(int * const multicast_socket, int port, char *mcast_group)
+void* rush_bind_server_multicast_socket(int * const multicast_socket, int port, char *mcast_group)
 {
     struct sockaddr_in localSock = (struct sockaddr_in) { 0 };
     struct ip_mreq group;
@@ -24,9 +24,10 @@ void rush_bind_server_multicast_socket(int * const multicast_socket, int port, c
     group.imr_interface.s_addr = inet_addr(LOCAL_IFACE);
     if(setsockopt(*multicast_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char *)&group, sizeof(group)) < 0)
         perror("Adding multicast group error");
+    return NULL;
 }
 
-void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
+void* FE_request_file_content_mcast(/*int const conn_socket, */uint8_t buffer[1024])
 {   
     printf("Message type 4 multicast\n");
     uint8_t *data = malloc(2 * sizeof(uint16_t));
@@ -51,42 +52,57 @@ void FE_request_file_content_mcast(int const conn_socket, uint8_t buffer[1024])
     buffer_to_send[0] = 1;
     buffer_to_send[0] = 6;
 
-    memcpy(&buffer_to_send[2], filename_len, 2);
-    memcpy(&buffer_to_send[4], filename, filename_len);
+    memcpy(&buffer_to_send[2], &filename_len, 2);
+    memcpy(&buffer_to_send[4], &filename, filename_len);
 
     //FIXME
     //SEND MCAST TYPE 6 REQUEST TO FRONT 
+    return NULL;
 }
 
-void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024])
+/* params
+uint8_t buffer[1024]
+*/
+void* FE_advertising_disponibility(uint8_t buf[1024])
 {
     printf("Message type 6 multicast\n");
     uint8_t *data = malloc(2 * sizeof(uint16_t));
-    char *filename; 
+//    char *filename; 
 
     uint16_t filename_len;
 
     data = (uint8_t *)&filename_len;
-
-    uint8_t *message = malloc(4 + filename_len);
-    // FIXME Front answers type 4 unicast to back
-    // version + type_message + name_length + filename
+    memcpy(data, &buf[2], 2);
+    return NULL;
 }
 
-/*
-  Pour gérer un message alive
- */
-void alive_message_handle(int const conn_socket, uint8_t buf[1024], char *address)
+/* params
+int const conn_socket
+uint8_t buffer[1024]
+char *address
+*/
+void* FE_alive_message(void* args)
 {
-    printf("Sending unicast list all files message to the BACKEND with IP %s\n", address);
-    uint8_t *message = malloc(2 * sizeof(uint8_t));
-    message[0] = 1;
-    message[1] = 2;
+    thread_args *arg = args;
+    char* address = arg->address;
 
-    //FIXME Gather ip list and the frontend send type 3 message to each ip he received 
+    pthread_mutex_lock(&(be_table.mutex));
+    char* temp;
+    temp = malloc(strlen(address) + 1);
+    strcpy(temp, address);		    
+    struct namelist *temp_l = malloc(sizeof(struct namelist));
+    temp_l->elt = temp;
+    temp_l->next_elt = NULL;
+    SGLIB_LIST_ADD(struct namelist, be_table.BE_alive, temp_l, next_elt);
+
+    pthread_mutex_unlock(&(be_table.mutex));
+    return NULL;
 }
 
-void BE_advertise_file_handle(uint8_t buffer[1024])
+/* params
+uint8_t buffer[1024]
+*/
+void* BE_advertise_file_handle(uint8_t buffer[1024])
 {
     uint8_t* data;
     size_t static_size = 13;
@@ -133,15 +149,31 @@ void BE_advertise_file_handle(uint8_t buffer[1024])
 	fprintf(stderr,
 		"Error on saving file.\n");
     }
+    return NULL;
 }
 
-/*
-  On utilise cette fonction pour gérer un discover sur un backend
- */
-void discover_message_handle(char* ipsrc, uint8_t srv_type)
+/* params
+char* ipsrc
+*/
+void* BE_alive_message_handle(char* ipsrc)
 {
+    // TYPE == 7
+    // FIXME Bind port replication
+    if (strcmp(ipsrc, "239.42.3.1") == 0)
+    {
+	send_mcast_request_list_all_files_msg(BE_REP_PORT, ipsrc);
+    }
+    return NULL;
+}
+
+/* params
+char* ipsrc
+*/
+void* BE_discover_message_handle(void* args)
+{
+    thread_args* t_args = (thread_args*)args;
+    uint8_t srv_type = t_args->srv_type;
     // TYPE == 8
-    int port = 0;
     if (srv_type == SRV_TYPE_BACKEND)
     {
 	printf("received discover from a %s\n", "BACK END");
@@ -152,5 +184,7 @@ void discover_message_handle(char* ipsrc, uint8_t srv_type)
 	printf("received discover from a %s\n", "FRONT END");
 	send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
     }
+    send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
+    pthread_exit(NULL);
 }
 

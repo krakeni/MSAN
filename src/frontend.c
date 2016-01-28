@@ -90,8 +90,6 @@ static int rush_frontend_handle_new_file(rush_server_config const * const config
 
         if (result > 0)
         {
-#warning FIXME: Some code has been deleted.
-
             free(path);
             path = NULL;
         }
@@ -166,9 +164,15 @@ static void rush_frontend_handle_dir_event(rush_server_config const * const conf
     while (finished == false);
 }
 
-static void rush_frontend_handle_new_connection_mcast(rush_server_config const * const config,
+static void rush_frontend_handle_new_connection_mcast(/* rush_server_config const * const config, */
         int const conn_socket)
 {
+    // THREAD VARIABLE A REORGANISER APRES
+    pthread_t thread1;
+    be_table.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    be_table.BE_alive = NULL;
+    thread_args args = { 0 };
+
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
     struct sockaddr_in srcaddr = { 0 };
@@ -180,6 +184,7 @@ static void rush_frontend_handle_new_connection_mcast(rush_server_config const *
     printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
     char *source_address = inet_ntoa(srcaddr.sin_addr);
     //read(conn_socket, &buf, 1024);
+    args.srv_type = SRV_TYPE_FRONTEND;
 
     version = buf[0];
     type = buf[1];
@@ -187,13 +192,15 @@ static void rush_frontend_handle_new_connection_mcast(rush_server_config const *
     {
         if (type == rush_message_type_file_available_here)
         {
-            FE_advertising_disponibility(conn_socket, buf);
+            FE_advertising_disponibility(buf);
             //TYPE 6
         }
         else if (type == rush_message_type_alive)
         {
             /* Front receives a keep alive from a backend, then answer to the backend with a type 2 */
-	    
+            args.address = source_address;
+            if(pthread_create(&thread1, NULL, FE_alive_message, (void*)&args) == -1) {
+                perror("Error in pthread_create");
 
             /* FIXME Check that the message came from the backend */
 
@@ -201,16 +208,17 @@ static void rush_frontend_handle_new_connection_mcast(rush_server_config const *
         }
     }
 }
+}
 
 static int rush_frontend_handle_new_connection(rush_server_config const * const config,
         int const conn_socket)
 {
+    pthread_t thread1;
     int result = EINVAL;
     uint8_t version = rush_message_version_none;
     ssize_t got = 0;
     assert(config != NULL);
     assert(conn_socket >= 0);
-
     got = read(conn_socket,
             &version,
             sizeof version);
@@ -234,8 +242,11 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
                     // FIXME
                     //Vient de l'interface qui demande la liste des fichiers
                     //Il faudra envoyer en multicast une requête de discover
-                    send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP, SRV_TYPE_FRONTEND);
-		    printf("Sending multicast discover to the group: %s\n", SAN_GROUP);
+		    //send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP, SRV_TYPE_FRONTEND);
+		    //printf("Sending multicast discover to the group: %s\n", SAN_GROUP);
+                    if(pthread_create(&thread1, NULL, FE_list_files_BE, NULL) == -1) {
+                        perror("Error in pthread_create"); 
+                    //send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
                 }
                 else if (type == rush_message_type_list_files_response)
                 {
@@ -325,8 +336,9 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
         fprintf(stderr,
                 "Not enough data available, skipping.\n");
     }
-
+}
     return result;
+
 }
 
 static int rush_frontend_handle_socket_event(rush_server_config const * const config,
@@ -476,7 +488,7 @@ static int rush_frontend_handle_multicast_socket_event(rush_server_config const 
     assert(config != NULL);
     assert(multicast_socket >= 0);
 
-    rush_frontend_handle_new_connection_mcast(config, multicast_socket);
+    rush_frontend_handle_new_connection_mcast(/* config,  */multicast_socket);
     //Il ne faut pas close la socket
     return result;
 }

@@ -3,7 +3,7 @@
 
 static char *HASH_DIR = "test/";
 
-void BE_FE_rqst_content_message(int const conn_socket)
+void* BE_FE_rqst_content_message(int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
@@ -76,10 +76,11 @@ void BE_FE_rqst_content_message(int const conn_socket)
 	fprintf(stderr,
 		"Not enough data available, skipping.\n");
     }
+    return NULL;
 
 }
 
-void BE_FE_send_content_message(int const conn_socket)
+void* BE_FE_send_content_message(int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
@@ -325,10 +326,11 @@ void BE_FE_send_content_message(int const conn_socket)
         fprintf(stderr,
                 "Not enough data available for status code, skipping.\n");
     }
+    return NULL;
 
 }
 
-void IF_FE_send_content_message(rush_server_config const * const config, int const conn_socket)
+void* IF_FE_send_content_message(rush_server_config const * const config, int const conn_socket)
 {
     int result = EINVAL;
     ssize_t got = 0;
@@ -392,7 +394,8 @@ void IF_FE_send_content_message(rush_server_config const * const config, int con
                                     content_len);
                             printf("Content: %s\n", content);
 
-                            if (got == content_len)
+			    uint64_t tmp = got;
+                            if (tmp == content_len)
                             {
                                 content[content_len] = '\0';
                                 uint8_t digest_len = rush_digest_type_to_size(digest_type); 
@@ -445,7 +448,7 @@ void IF_FE_send_content_message(rush_server_config const * const config, int con
                                             {
                                                 int errnum = errno;
                                                 fprintf(stderr, "Can't access the file. Reason : \n errno : %d", errnum);
-                                                return;
+                                                return NULL;
                                             }
 
                                             fwrite(content, 1, content_len,  file);
@@ -456,7 +459,7 @@ void IF_FE_send_content_message(rush_server_config const * const config, int con
                                             char *hash_filename = malloc(hash_filename_len * sizeof (char));
                                             hash_filename[hash_filename_len] = '\0';
 
-                                            printf("Hash_filename_len = %d(HASH_DIR) + %d(filename_len) + 1\n", strlen(HASH_DIR), filename_len);
+                                            /* printf("Hash_filename_len = %z(HASH_DIR) + %z(filename_len) + 1\n", (size_t)strlen(HASH_DIR), (size_t)filename_len); */
 
 
                                             strcpy(hash_filename, HASH_DIR);
@@ -483,7 +486,7 @@ void IF_FE_send_content_message(rush_server_config const * const config, int con
                                     {
                                         fprintf(stderr,
                                                 "Not enough data available for digest, skipping.\n");
-                                        fprintf(stderr, "Got = %d\n", got);
+                                        /* fprintf(stderr, "Got = %z\n", got); */
                                     }
 
                                     free(digest);
@@ -577,5 +580,16 @@ void IF_FE_send_content_message(rush_server_config const * const config, int con
         fprintf(stderr,
                 "Not enough data available for status code, skipping.\n");
     }
+    return NULL;
 
+}
+
+void* FE_list_files_BE(void* args)
+{
+    thread_args* t_args = (thread_args*)args;
+    uint8_t srv_type = t_args->srv_type;
+    send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, srv_type);
+    sleep(1);
+
+    pthread_exit(NULL);
 }

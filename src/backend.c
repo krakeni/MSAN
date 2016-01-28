@@ -95,8 +95,6 @@ static int rush_backend_handle_new_file(rush_server_config const * const config,
         if (result > 0)
         {
             printf("HERE I AM\n");
-#warning FIXME: Some code has been deleted.
-
             free(path);
             path = NULL;
         }
@@ -172,23 +170,29 @@ static void rush_backend_handle_dir_event(rush_server_config const * const confi
 }
 
 
-static void rush_backend_handle_new_connection_mcast(rush_server_config const * const config,
+static void rush_backend_handle_new_connection_mcast(/* rush_server_config const * const config, */
         int const conn_socket)
 {
+    // THREAD VARIABLE A REORGANISER APRES
+    pthread_t thread1;
+    be_table.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
+    be_table.BE_alive = NULL;
+
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
     struct sockaddr_in srcaddr = { 0 };
     socklen_t addrlen = sizeof(struct sockaddr_in);
-
     uint8_t buf[1024];
     memset(&buf, 0, 1024);
     recvfrom(conn_socket, buf, 1024, 0, (struct sockaddr *)&srcaddr, &addrlen);
     printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
     //read(conn_socket, &buf, 1024);
 
-    char *ipsrc = inet_ntoa(srcaddr.sin_addr);
     version = buf[0];
     type = buf[1];
+    thread_args args = { 0 };
+    args.ipsrc = inet_ntoa(srcaddr.sin_addr);
+    args.srv_type = SRV_TYPE_BACKEND;
     if (version == rush_message_version_1)
     {
         if (type == rush_message_type_new_file)
@@ -204,12 +208,15 @@ static void rush_backend_handle_new_connection_mcast(rush_server_config const * 
         else if (type == rush_message_type_discover)
         {
             //TYPE 8
-	    uint8_t srv_type = buf[2];
-	    discover_message_handle(ipsrc, srv_type);
+	    /* uint8_t srv_type = buf[2]; */
+	    /* discover_message_handle(ipsrc, srv_type); */
+	    //BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr));
+            if(pthread_create(&thread1, NULL, BE_discover_message_handle, &args) == -1) {
+                perror("Error in pthread_create");
         }
     }
 }
-
+}
 
 static int rush_backend_handle_new_connection(rush_server_config const * const config,
         int const conn_socket)
@@ -446,7 +453,7 @@ static int rush_backend_handle_multicast_socket_event(rush_server_config const *
     assert(config != NULL);
     assert(multicast_socket >= 0);
 
-    rush_backend_handle_new_connection_mcast(&config, multicast_socket);
+    rush_backend_handle_new_connection_mcast(/* config,  */multicast_socket);
     //Il ne faut pas close la socket
     return result;
 }
