@@ -186,6 +186,7 @@ static void rush_backend_handle_new_connection_mcast(rush_server_config const * 
     printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
     //read(conn_socket, &buf, 1024);
 
+    char *ipsrc = inet_ntoa(srcaddr.sin_addr);
     version = buf[0];
     type = buf[1];
     if (version == rush_message_version_1)
@@ -198,13 +199,13 @@ static void rush_backend_handle_new_connection_mcast(rush_server_config const * 
         else if (type == rush_message_type_alive)
         {
             //TYPE 7
-	    BE_alive_message_handle(inet_ntoa(srcaddr.sin_addr));
+	    
         }
         else if (type == rush_message_type_discover)
         {
             //TYPE 8
 	    uint8_t srv_type = buf[2];
-	    BE_discover_message_handle(inet_ntoa(srcaddr.sin_addr), srv_type);
+	    discover_message_handle(ipsrc, srv_type);
         }
     }
 }

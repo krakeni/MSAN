@@ -74,11 +74,11 @@ void FE_advertising_disponibility(int const conn_socket, uint8_t buf[1024])
 }
 
 /*
-  Sur le FE pour gérer un message alive
+  Pour gérer un message alive
  */
-void FE_alive_message_handle(int const conn_socket, uint8_t buf[1024], char *address)
+void alive_message_handle(int const conn_socket, uint8_t buf[1024], char *address)
 {
-    printf("Sending unicast list all files message to the BACKEND with IP %s", address);
+    printf("Sending unicast list all files message to the BACKEND with IP %s\n", address);
     uint8_t *message = malloc(2 * sizeof(uint8_t));
     message[0] = 1;
     message[1] = 2;
@@ -135,32 +135,22 @@ void BE_advertise_file_handle(uint8_t buffer[1024])
     }
 }
 
-void BE_alive_message_handle(char* ipsrc)
-{
-    // TYPE == 7
-    // FIXME Bind port replication
-    if (strcmp(ipsrc, "239.42.3.1") == 0)
-    {
-	send_mcast_request_list_all_files_msg(BE_REP_PORT, ipsrc);
-    }
-}
-
 /*
   On utilise cette fonction pour gérer un discover sur un backend
  */
-void BE_discover_message_handle(char* ipsrc, uint8_t srv_type)
+void discover_message_handle(char* ipsrc, uint8_t srv_type)
 {
     // TYPE == 8
     int port = 0;
     if (srv_type == SRV_TYPE_BACKEND)
     {
 	printf("received discover from a %s\n", "BACK END");
-	send_mcast_alive(BE_MCAST_PORT, ipsrc);
+	send_mcast_alive(BE_MCAST_PORT, SAN_GROUP);
     }
     else if (srv_type == SRV_TYPE_FRONTEND)
     {
 	printf("received discover from a %s\n", "FRONT END");
-	send_mcast_alive(FE_MCAST_PORT, ipsrc);
+	send_mcast_alive(FE_MCAST_PORT, FRONTEND_GROUP);
     }
 }
 

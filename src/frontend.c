@@ -193,7 +193,7 @@ static void rush_frontend_handle_new_connection_mcast(rush_server_config const *
         else if (type == rush_message_type_alive)
         {
             /* Front receives a keep alive from a backend, then answer to the backend with a type 2 */
-            FE_alive_message_handle(conn_socket, buf, source_address);
+	    
 
             /* FIXME Check that the message came from the backend */
 
@@ -235,6 +235,7 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
                     //Vient de l'interface qui demande la liste des fichiers
                     //Il faudra envoyer en multicast une requête de discover
                     send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP, SRV_TYPE_FRONTEND);
+		    printf("Sending multicast discover to the group: %s\n", SAN_GROUP);
                 }
                 else if (type == rush_message_type_list_files_response)
                 {
@@ -283,7 +284,7 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
                     // TYPE = 7
                     // Back-end alive multicast message
                     //Face à un alive message on stocke les IP qui ont répondu
-
+		    printf("reveived alive from BE\n");
                 }
                 else
                 {
