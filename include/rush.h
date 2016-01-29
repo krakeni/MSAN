@@ -35,6 +35,7 @@ typedef struct
     char *ipsrc;
     uint8_t srv_type;
     uint8_t src_srv_type;
+    uint16_t port;
 } thread_args;
 
 typedef struct

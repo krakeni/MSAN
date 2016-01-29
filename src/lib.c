@@ -231,7 +231,6 @@ int send_ucast_msg(char *address, int port, uint8_t *message, long long message_
     return 0;
 }
 
-
 void send_mcast_request_list_all_files_msg(uint16_t port, const char* mcast_group)
 {
     uint8_t msg[2];
@@ -240,12 +239,16 @@ void send_mcast_request_list_all_files_msg(uint16_t port, const char* mcast_grou
     send_mcast_msg(msg, 2, port, mcast_group);
 }
 
-void send_ucast_request_list_all_files_msg(char *address, int port)
+void* send_ucast_request_list_all_files_msg(void *args)
 {
+    thread_args* t_args = (thread_args*)args;
+    char* address = t_args->address;
+    uint16_t port = t_args->port;
     uint8_t msg[2];
     msg[0] = 1;
     msg[1] = 2;
     send_ucast_msg(address, port, msg, 2);
+    return NULL;
 }
 
 struct BE_file_info_list *BE_file_info_list_create_node(BE_file_info element)

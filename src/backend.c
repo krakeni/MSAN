@@ -220,7 +220,7 @@ static void rush_backend_handle_new_connection_mcast(/* rush_server_config const
 }
 
 static int rush_backend_handle_new_connection(rush_server_config const * const config,
-        int const conn_socket)
+					      int const conn_socket)
 {
     fprintf(stdout, "HANDLE_NEW_CONNECTION WITH SOCKET = %d\n", conn_socket);
     int result = EINVAL;
@@ -230,20 +230,16 @@ static int rush_backend_handle_new_connection(rush_server_config const * const c
     assert(conn_socket >= 0);
 
     got = read(conn_socket,
-            &version,
-            sizeof version);
+	       &version,
+	       sizeof version);
     if (got == sizeof version)
     {
-        printf("VERSION DU MESSAGE : %d\n", version);
         if (version == rush_message_version_1)
         {
             uint8_t type = rush_message_type_none;
-
-            printf("HERE I AM\n");
             got = read(conn_socket,
-                    &type,
-                    sizeof type);
-            printf("HERE I AM\n");
+		       &type,
+		       sizeof type);
             printf("Type: %" PRIu8 "\n", type);
             if (got == sizeof type)
             {

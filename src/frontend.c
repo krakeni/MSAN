@@ -167,6 +167,7 @@ static void rush_frontend_handle_dir_event(rush_server_config const * const conf
 static void rush_frontend_handle_new_connection_mcast(/* rush_server_config const * const config, */
     int const conn_socket)
 {
+    printf("Entering multicast handle new connection\n");
     // THREAD VARIABLE A REORGANISER APRES
     pthread_t thread1;
     alive_table.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
@@ -197,16 +198,25 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
         }
         else if (type == rush_message_type_alive)
         {
-            /* Front receives a keep alive from a backend, then answer to the backend with a type 2 */
+            /* Front receives a keep alive from a backend, then answers to the backend with a type 2 */
             args.address = source_address;
 	    args.src_srv_type = buf[2];
             if(pthread_create(&thread1, NULL, alive_message_handle, (void*)&args) == -1) {
                 perror("Error in pthread_create");
-
-		/* FIXME Check that the message came from the backend */
-
-		//TYPE 7
 	    }
+	    printf("\nNOW SUPPOSED TO SEND LIST ALL FILES TO BACK ENDS\n"); 
+	    pthread_t req_files[2];
+	    int count = 0;
+	    args.port = BE_PORT;
+	    SGLIB_LIST_MAP_ON_ELEMENTS(struct namelist, alive_table.BE_alive, iteratedListTemporary, next_elt, {
+		    //Envoyer des request files aux backend ayant répondu
+		    if (count++ < 2)
+		    {
+			if(pthread_create(&req_files[count], NULL, send_ucast_request_list_all_files_msg, (void*)&args) == -1) {
+			    perror("Error in pthread_create");
+			}
+		    });
+		}
 	}
     }
 }
@@ -214,6 +224,7 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
 static int rush_frontend_handle_new_connection(rush_server_config const * const config,
 					       int const conn_socket)
 {
+    printf("Entering handle new connection\n");
     pthread_t thread1;
     int result = EINVAL;
     uint8_t version = rush_message_version_none;
@@ -240,100 +251,73 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
             {
                 if (type == rush_message_type_list_files)
                 {
+		    printf("request for a list of files\n");
                     if(pthread_create(&thread1, NULL, FE_list_files_BE, &args) == -1)
 		    {
                         perror("Error in pthread_create");
-			//send_mcast_discover(BE_MCAST_PORT ,SAN_GROUP);
-		    }
-		    else if (type == rush_message_type_list_files_response)
-		    {
-			// TYPE == 3
-			// Back-end unicast message sending the lists of all files
-			//
-		    }
-		    else if (type == rush_message_type_get_file)
-		    {
-			// TYPE == 4
-			BE_FE_rqst_content_message(conn_socket);
-		    }
-		    else if (type == rush_message_type_get_file_response)
-		    {
-			// TYPE == 5
-			BE_FE_send_content_message(conn_socket);
-		    }
-		    else if (type == rush_message_type_file_available_here)
-		    {
-			// TYPE = 6
-			// Back-end multicast message advertising the disponibility of a file
-
-		    }
-		    else if (type == rush_message_type_alive)
-		    {
-			// TYPE = 7
-			// Back-end alive multicast message
-		    }
-		    else if (type == rush_message_new_file_from_front)
-		    {
-			// TYPE == 9
-			// File received from client
-			IF_FE_send_content_message(config, conn_socket);
-
-
-		    }
-		    else if (type == rush_message_type_file_available_here)
-		    {
-			// TYPE = 6
-			// Back-end multicast message advertising the disponibility of a file
-
-			printf("HERE I AM\n");
-		    }
-		    else if (type == rush_message_type_alive)
-		    {
-			// TYPE = 7
-			// Back-end alive multicast message
-			//Face à un alive message on stocke les IP qui ont répondu
-			printf("reveived alive from BE\n");
-		    }
-		    else
-		    {
-			fprintf(stderr,
-				"Discarding unexpected message of type %"PRIu8"\n",
-				type);
 		    }
 		}
-		else if (got == -1)
+		else if (type == rush_message_type_list_files_response)
 		{
-		    result = errno;
-		    fprintf(stderr,
-			    "Error reading message type: %d\n",
-			    result);
+		    // TYPE == 3
+		    // Back-end unicast message sending the lists of all files
+		}
+		else if (type == rush_message_type_get_file)
+		{
+		    // TYPE == 4
+		    BE_FE_rqst_content_message(conn_socket);
+		}
+		else if (type == rush_message_type_get_file_response)
+		{
+		    // TYPE == 5
+		    BE_FE_send_content_message(conn_socket);
+		}
+		else if (type == rush_message_new_file_from_front)
+		{
+		    // TYPE == 9
+		    // File received from client
+		    IF_FE_send_content_message(config, conn_socket);   
 		}
 		else
 		{
 		    fprintf(stderr,
-			    "Not enough data available, skipping.\n");
+			    "Discarding unexpected message of type %"PRIu8"\n",
+			    type);
 		}
+	    }
+	    else if (got == -1)
+	    {
+		result = errno;
+		fprintf(stderr,
+			"Error reading message type: %d\n",
+			result);
 	    }
 	    else
 	    {
 		fprintf(stderr,
-			"Discarding unexpected message of version %"PRIu8"\n",
-			version);
+			"Not enough data available, skipping.\n");
 	    }
-	}
-	else if (got == -1)
-	{
-	    result = errno;
-	    fprintf(stderr,
-		    "Error reading message type: %d\n",
-		    result);
 	}
 	else
 	{
 	    fprintf(stderr,
-		    "Not enough data available, skipping.\n");
+		    "Discarding unexpected message of version %"PRIu8"\n",
+		    version);
 	}
     }
+    else if (got == -1)
+    {
+	result = errno;
+	fprintf(stderr,
+		"Error reading message version: %d\n",
+		result);
+    }
+    else
+    {
+	fprintf(stderr,
+		"Not enough data available, skipping.\n");
+    }
+
     return result;
 }
 
@@ -479,12 +463,11 @@ static int rush_frontend_listen_on_unicast(char const * const unicast_bind_addr_
 
 static int rush_frontend_handle_multicast_socket_event(rush_server_config const *config, int multicast_socket)
 {
-    fprintf(stdout, "HANDLE_MULTICAST_SOCKET_EVENT\n");
     int result = 0;
     assert(config != NULL);
     assert(multicast_socket >= 0);
 
-    rush_frontend_handle_new_connection_mcast(/* config,  */multicast_socket);
+    rush_frontend_handle_new_connection_mcast(multicast_socket);
     //Il ne faut pas close la socket
     return result;
 }

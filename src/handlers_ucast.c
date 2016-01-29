@@ -589,7 +589,7 @@ void* FE_list_files_BE(void* args)
     thread_args* t_args = (thread_args*)args;
     uint8_t srv_type = t_args->srv_type;
     send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, srv_type);
-    sleep(1);
-
+    sleep(1000);
+    
     pthread_exit(NULL);
 }
