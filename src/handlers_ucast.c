@@ -587,9 +587,21 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 void* FE_list_files_BE(void* args)
 {
     thread_args* t_args = (thread_args*)args;
+
     uint8_t srv_type = t_args->srv_type;
     send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, srv_type);
-    sleep(1000);
-    
+    sleep(1);
+    while (alive_table.BE_alive->next_elt != NULL)
+    {
+        printf("BE ALIVE %s \n", alive_table.BE_alive->elt);
+        t_args->address = alive_table.BE_alive->elt;
+        t_args->port = BE_PORT;
+        send_ucast_request_list_all_files_msg(t_args);
+        alive_table.BE_alive = alive_table.BE_alive->next_elt;
+    }
+    printf("BE ALIVE %s \n", alive_table.BE_alive->elt);
+    t_args->address = alive_table.BE_alive->elt;
+    t_args->port = BE_PORT;
+    send_ucast_request_list_all_files_msg(t_args);
     pthread_exit(NULL);
 }

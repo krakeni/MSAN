@@ -36,7 +36,7 @@ int send_ucast_msg(char *address, int port, uint8_t *message, long long message_
 
 void send_mcast_request_list_all_files_msg(uint16_t port, const char* mcast_group);
 
-void *send_ucast_request_list_all_files_msg(void *args);
+void* send_ucast_request_list_all_files_msg(void *args);
 
 struct BE_file_info_list *BE_file_info_list_create_node(BE_file_info element);
 

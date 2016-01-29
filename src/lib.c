@@ -241,7 +241,7 @@ void send_mcast_request_list_all_files_msg(uint16_t port, const char* mcast_grou
 
 void* send_ucast_request_list_all_files_msg(void *args)
 {
-    thread_args* t_args = (thread_args*)args;
+    thread_args* t_args = args;
     char* address = t_args->address;
     uint16_t port = t_args->port;
     uint8_t msg[2];

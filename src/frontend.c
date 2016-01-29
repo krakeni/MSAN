@@ -204,11 +204,11 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
             if(pthread_create(&thread1, NULL, alive_message_handle, (void*)&args) == -1) {
                 perror("Error in pthread_create");
 	    }
-	    printf("\nNOW SUPPOSED TO SEND LIST ALL FILES TO BACK ENDS\n"); 
+	    /*printf("\nNOW SUPPOSED TO SEND LIST ALL FILES TO BACK ENDS\n"); 
 	    pthread_t req_files[2];
 	    int count = 0;
-	    args.port = BE_PORT;
-	    SGLIB_LIST_MAP_ON_ELEMENTS(struct namelist, alive_table.BE_alive, iteratedListTemporary, next_elt, {
+	    args.port = BE_PORT;*/
+	    /*SGLIB_LIST_MAP_ON_ELEMENTS(struct namelist, alive_table.BE_alive, iteratedListTemporary, next_elt, {
 		    //Envoyer des request files aux backend ayant répondu
 		    if (count++ < 2)
 		    {
@@ -216,7 +216,7 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
 			    perror("Error in pthread_create");
 			}
 		    });
-		}
+		}i*/
 	}
     }
 }

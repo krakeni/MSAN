@@ -90,7 +90,7 @@ void* alive_message_handle(void* args)
     temp_l->next_elt = NULL;
     if (src_srv_type == SRV_TYPE_BACKEND)
     {
-	printf("received alive from a %s\n", "BACK END");
+	printf("received alive from a %s\n", address);
 	pthread_mutex_lock(&(alive_table.mutex));
 	SGLIB_LIST_ADD(struct namelist, alive_table.BE_alive, temp_l, next_elt);
 	pthread_mutex_unlock(&(alive_table.mutex));

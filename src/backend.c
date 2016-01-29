@@ -229,6 +229,9 @@ static int rush_backend_handle_new_connection(rush_server_config const * const c
     assert(config != NULL);
     assert(conn_socket >= 0);
 
+    /*thread_args args = { 0 };
+    args.srv_type = SRV_TYPE_BACKEND;
+    */
     got = read(conn_socket,
 	       &version,
 	       sizeof version);
@@ -245,10 +248,8 @@ static int rush_backend_handle_new_connection(rush_server_config const * const c
             {
                 if (type == rush_message_type_list_files)
                 {
-                    // TYPE == 2
-                    // UNICAST RQST LIST OF FILES
-                    // FIXME
-		    printf("Managing a list all files request\n");
+                    //FIXME send a type 3 with list of files
+                    printf("TYPE 3 WITH THE LIST OF ALL FILE SENDED \n");
                 }
                 else if (type == rush_message_type_get_file)
                 {
@@ -461,6 +462,9 @@ int main(void)
     int unicast_socket = -1;
     int inotify_fd = -1;
     int dir_inotify_fd = -1;
+    thread_args args = { 0 }; 
+    args.address = LOCAL_IFACE;
+    args.port = FRONTEND_PORT;
 
     int multicast_socket = -1;
     rush_bind_server_multicast_socket(&multicast_socket, BE_MCAST_PORT, SAN_GROUP);
@@ -473,6 +477,7 @@ int main(void)
     int result = rush_backend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
+    send_ucast_request_list_all_files_msg(&args);
     if (result == 0)
     {
         result = rush_backend_listen_on_unicast(config.unicast_bind_addr_str,
