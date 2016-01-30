@@ -143,7 +143,7 @@ void* BE_FE_send_content_message(int const conn_socket)
 	      got = read(conn_socket,
 			 content,
 			 content_len);
-	      printf("Content: %s\n", content);
+	      //printf("Content: %s\n", content);
 
 	      if (got == content_len)
 	      {
@@ -328,7 +328,6 @@ void* BE_FE_send_content_message(int const conn_socket)
 	    "Not enough data available for status code, skipping.\n");
   }
   return NULL;
-
 }
 
 void* IF_FE_send_content_message(rush_server_config const * const config, int const conn_socket)
@@ -393,7 +392,7 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 	      got = read(conn_socket,
 			 content,
 			 content_len);
-	      printf("Content: %s\n", content);
+//	      printf("Content: %s\n", content);
 
 	      uint64_t tmp = got;
 	      if (tmp == content_len)
