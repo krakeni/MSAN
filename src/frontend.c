@@ -401,7 +401,7 @@ static int rush_frontend_listen_on_unicast(char const * const unicast_bind_addr_
 
                 if (result == 0)
                 {
-                    static int const timeout = 5;
+                    static int const timeout = 50;
 
                     result = setsockopt(*unicast_socket,
 					IPPROTO_TCP,
