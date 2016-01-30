@@ -395,8 +395,9 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 	      printf("Content: %s\n", content);
 	      printf("Got: %zu\n", got);
 	      printf("Content_len: %zu\n", content_len);
+	      printf("Content_len_net: %zu\n", content_len_net);
 
-	      if (got == content_len)
+	      if (got == content_len_net)
 	      {
 		content[content_len] = '\0';
 		uint8_t digest_len = rush_digest_type_to_size(digest_type);
