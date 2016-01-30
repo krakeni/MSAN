@@ -392,10 +392,9 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 	      got = read(conn_socket,
 			 content,
 			 content_len);
-//	      printf("Content: %s\n", content);
+	      printf("Content: %s\n", content);
 
-	      uint64_t tmp = got;
-	      if (tmp == content_len)
+	      if (got == content_len)
 	      {
 		content[content_len] = '\0';
 		uint8_t digest_len = rush_digest_type_to_size(digest_type);
