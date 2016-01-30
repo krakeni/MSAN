@@ -172,7 +172,6 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
     pthread_t thread1;
     alive_table.mutex = (pthread_mutex_t)PTHREAD_MUTEX_INITIALIZER;
     alive_table.BE_alive = NULL;
-    thread_args args = { 0 };
 
     uint8_t version = rush_message_version_none;
     uint8_t type = rush_message_type_none;
@@ -183,9 +182,8 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
     memset(&buf, 0, 1024);
     recvfrom(conn_socket, buf, 1024, 0, (struct sockaddr *)&srcaddr, &addrlen);
     printf("IP SOURCE %s\n",inet_ntoa(srcaddr.sin_addr));
-    char *source_address = inet_ntoa(srcaddr.sin_addr);
     //read(conn_socket, &buf, 1024);
-    args.srv_type = SRV_TYPE_FRONTEND;
+
 
     version = buf[0];
     type = buf[1];
@@ -199,12 +197,16 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
         else if (type == rush_message_type_alive)
         {
             /* Front receives a keep alive from a backend, then answers to the backend with a type 2 */
-            args.address = source_address;
-	    args.src_srv_type = buf[2];
-            if(pthread_create(&thread1, NULL, alive_message_handle, (void*)&args) == -1) {
-                perror("Error in pthread_create");
-	    }
-	    /*printf("\nNOW SUPPOSED TO SEND LIST ALL FILES TO BACK ENDS\n"); 
+
+	  thread_args *args = malloc(sizeof (thread_args));
+	  args->address = strdup(inet_ntoa(srcaddr.sin_addr));
+	  args->srv_type = SRV_TYPE_FRONTEND;
+	  args->src_srv_type = buf[2];
+
+	  if(pthread_create(&thread1, NULL, alive_message_handle, (void*)args) == -1) {
+	    perror("Error in pthread_create");
+	  }
+	    /*printf("\nNOW SUPPOSED TO SEND LIST ALL FILES TO BACK ENDS\n");
 	    pthread_t req_files[2];
 	    int count = 0;
 	    args.port = BE_PORT;*/
@@ -276,7 +278,7 @@ static int rush_frontend_handle_new_connection(rush_server_config const * const 
 		{
 		    // TYPE == 9
 		    // File received from client
-		    IF_FE_send_content_message(config, conn_socket);   
+		    IF_FE_send_content_message(config, conn_socket);
 		}
 		else
 		{
@@ -487,6 +489,8 @@ int main(void)
     config.unicast_bind_addr_str = "::";
     config.unicast_bind_port_str = "4242";
 
+    send_mcast_discover(BE_MCAST_PORT, SAN_GROUP ,0);
+
     int result = rush_frontend_watch_dir(config.watched_dir,
 					 &inotify_fd,
 					 &dir_inotify_fd);
@@ -573,7 +577,7 @@ int main(void)
                                         fprintf(stdout,
                                                 "Got multicast_socket event!\n");
                                         rush_frontend_handle_multicast_socket_event(
-					    &config, 
+					    &config,
 					    multicast_socket);
                                     }
                                 }

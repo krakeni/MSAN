@@ -28,10 +28,10 @@ void* rush_bind_server_multicast_socket(int * const multicast_socket, int port, 
 }
 
 void* FE_request_file_content_mcast(/*int const conn_socket, */uint8_t buffer[1024])
-{   
+{
     printf("Message type 4 multicast\n");
     uint8_t *data = malloc(2 * sizeof(uint16_t));
-    char *filename; 
+    char *filename;
 
     uint16_t filename_len;
 
@@ -46,7 +46,7 @@ void* FE_request_file_content_mcast(/*int const conn_socket, */uint8_t buffer[10
 
     //Send multicast request to frontend type 6
     //Backend advertises the disponibility of a file
-    
+
     uint8_t *buffer_to_send = malloc(4 + filename_len);
 
     buffer_to_send[0] = 1;
@@ -56,7 +56,7 @@ void* FE_request_file_content_mcast(/*int const conn_socket, */uint8_t buffer[10
     memcpy(&buffer_to_send[4], &filename, filename_len);
 
     //FIXME
-    //SEND MCAST TYPE 6 REQUEST TO FRONT 
+    //SEND MCAST TYPE 6 REQUEST TO FRONT
     return NULL;
 }
 
@@ -67,7 +67,7 @@ void* FE_advertising_disponibility(uint8_t buf[1024])
 {
     printf("Message type 6 multicast\n");
     uint8_t *data = malloc(2 * sizeof(uint16_t));
-//    char *filename; 
+//    char *filename;
 
     uint16_t filename_len;
 
@@ -81,7 +81,7 @@ void* alive_message_handle(void* args)
     thread_args* t_args = (thread_args*)args;
     char* address = t_args->address;
     uint8_t src_srv_type = t_args->src_srv_type;
-
+    printf("Thread Address: %s\n", address);
     char* temp;
     temp = malloc(strlen(address) + 1);
     strcpy(temp, address);
@@ -178,4 +178,3 @@ void* discover_message_handle(void* args)
     }
     pthread_exit(NULL);
 }
-
