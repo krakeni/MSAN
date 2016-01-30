@@ -364,7 +364,7 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 
       got = read(conn_socket,
 		 &content_len_net,
-		 sizeof content_len_net);
+		 563210);
       printf("sizeof Content len net: %lu\n", sizeof content_len_net);
       printf("got: %zu\n", got);
 
@@ -397,7 +397,7 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 	      printf("Content_len: %zu\n", content_len);
 	      printf("Content_len_net: %zu\n", content_len_net);
 
-	      if (got == content_len_net)
+	      if (got == content_len)
 	      {
 		content[content_len] = '\0';
 		uint8_t digest_len = rush_digest_type_to_size(digest_type);
