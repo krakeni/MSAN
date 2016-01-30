@@ -364,7 +364,7 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 
       got = read(conn_socket,
 		 &content_len_net,
-		 563210);
+		 sizeof content_len_net);
       printf("sizeof Content len net: %lu\n", sizeof content_len_net);
       printf("got: %zu\n", got);
 
@@ -391,7 +391,7 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 	    {
 	      got = read(conn_socket,
 			 content,
-			 content_len);
+			 563210);
 	      printf("Content: %s\n", content);
 	      printf("Got: %zu\n", got);
 	      printf("Content_len: %zu\n", content_len);
