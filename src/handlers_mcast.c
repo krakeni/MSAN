@@ -102,6 +102,7 @@ void* alive_message_handle(void* args)
 	SGLIB_LIST_ADD(struct namelist, alive_table.FE_alive, temp_l, next_elt);
 	pthread_mutex_unlock(&(alive_table.mutex));
     }
+
     free(address);
     free(args);
     return NULL;

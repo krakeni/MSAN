@@ -22,7 +22,7 @@
 #endif
 
 
-char *FRONT_ADDRESS = "127.0.0.1";
+char *FRONT_ADDRESS = "192.168.56.104";
 int FRONT_PORT = 4242;
 
 void option_help()
@@ -96,30 +96,30 @@ int main(int argc, char **argv)
 
     int socket_desc;
     struct sockaddr_in server;
-     
+
     //Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
     {
         DEBUG_PRINT(("Could not create socket"));
     }
-         
+
     /* Put the proxy address there */
     server.sin_addr.s_addr = inet_addr(FRONT_ADDRESS);
     server.sin_family = AF_INET;
     server.sin_port = htons(FRONT_PORT);
- 
+
     //Connect to remote server
     if (connect(socket_desc , (struct sockaddr *)&server , sizeof(server)) < 0)
     {
         puts("connect error");
         return 1;
     }
-     
+
     puts("Connected\n");
 
     /* End Socket */
-     
+
     long long  message_length = 0;
     if (get_value != NULL)
     {
@@ -224,10 +224,10 @@ int main(int argc, char **argv)
 
         uint8_t message[message_length];
 
-        message[0] = version; 
-        message[1] = msg_type; 
-        message[2] = status_code; 
-        message[3] = digest_type; 
+        message[0] = version;
+        message[1] = msg_type;
+        message[2] = status_code;
+        message[3] = digest_type;
 
         /* Content length parse */
         /* Size of file on 64 bits */
@@ -236,7 +236,7 @@ int main(int argc, char **argv)
         message[4] = (uint8_t) (content_len / pow(2, power));
         long long current_size = content_len;
 
-        for (int i = 5; i < 11; i++) 
+        for (int i = 5; i < 11; i++)
         {
             power -= 8;
             if (message[i - 1] == 0)
@@ -250,7 +250,7 @@ int main(int argc, char **argv)
         }
 
         message[11] = content_len - (message[10] * 256);
-        
+
         /* Copying file content to buffer which will be send in the socket */
 
 
@@ -260,7 +260,7 @@ int main(int argc, char **argv)
         memcpy(message + digest_value_pos_in_buffer, digest_value, digest_len);
 
         message[digest_value_pos_in_buffer + digest_len] = filename_len / 256;
-        message[digest_value_pos_in_buffer + digest_len + 1] = filename_len - 
+        message[digest_value_pos_in_buffer + digest_len + 1] = filename_len -
             (message[content_len + static_message_size] * 256);
 
         memcpy(message + digest_value_pos_in_buffer + digest_len + 2, filename_final, filename_len);
@@ -275,4 +275,3 @@ int main(int argc, char **argv)
     }
     return 0;
 }
-
