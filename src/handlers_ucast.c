@@ -393,6 +393,8 @@ void* IF_FE_send_content_message(rush_server_config const * const config, int co
 			 content,
 			 content_len);
 	      printf("Content: %s\n", content);
+	      printf("Got: %zu\n", got);
+	      printf("Content_len: %zu\n", content_len);
 
 	      if (got == content_len)
 	      {
