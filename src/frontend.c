@@ -203,6 +203,8 @@ static void rush_frontend_handle_new_connection_mcast(/* rush_server_config cons
 	  args->srv_type = SRV_TYPE_FRONTEND;
 	  args->src_srv_type = buf[2];
 
+	  printf("args->address: %s\n", args->address);
+
 	  if(pthread_create(&thread1, NULL, alive_message_handle, (void*)args) == -1) {
 	    perror("Error in pthread_create");
 	  }
