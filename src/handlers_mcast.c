@@ -81,7 +81,6 @@ void* alive_message_handle(void* args)
     thread_args* t_args = (thread_args*)args;
     char* address = t_args->address;
     uint8_t src_srv_type = t_args->src_srv_type;
-    printf("Thread Address: %s\n", address);
     char* temp;
     temp = malloc(strlen(address) + 1);
     strcpy(temp, address);

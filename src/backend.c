@@ -478,7 +478,7 @@ int main(void)
     int result = rush_backend_watch_dir(config.watched_dir,
             &inotify_fd,
             &dir_inotify_fd);
-    send_ucast_request_list_all_files_msg(&args);
+
     if (result == 0)
     {
         result = rush_backend_listen_on_unicast(config.unicast_bind_addr_str,
