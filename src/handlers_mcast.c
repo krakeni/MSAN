@@ -93,6 +93,7 @@ void* alive_message_handle(void* args)
 	printf("received alive from a %s\n", address);
 	pthread_mutex_lock(&(alive_table.mutex));
 	SGLIB_LIST_ADD(struct namelist, alive_table.BE_alive, temp_l, next_elt);
+	first_back_address = temp;
 	pthread_mutex_unlock(&(alive_table.mutex));
     }
     else if (src_srv_type == SRV_TYPE_FRONTEND)
@@ -100,6 +101,7 @@ void* alive_message_handle(void* args)
 	pthread_mutex_lock(&(alive_table.mutex));
 	printf("received alive from a %s\n", "FRONT END");
 	SGLIB_LIST_ADD(struct namelist, alive_table.FE_alive, temp_l, next_elt);
+	first_back_address = temp;
 	pthread_mutex_unlock(&(alive_table.mutex));
     }
 

@@ -57,7 +57,7 @@ typedef struct
     uint32_t BE1_addr;
     uint8_t BE2_addr_type;
     uint32_t BE2_addr;
-    
+
 } BE_file_info;
 
 struct BE_file_info_list {
@@ -70,7 +70,9 @@ struct namelist {
     struct namelist *next_elt;
 };
 
-typedef struct 
+char *first_back_address;
+
+typedef struct
 {
     struct namelist *BE_alive;
     struct namelist *FE_alive;
