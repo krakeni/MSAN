@@ -3,7 +3,7 @@
 #include "../include/rush.h"
 
 static char *HASH_DIR = "test/";
-static char *handle_dir = "/tmp/test/";
+static char *handle_dir = "/tmp/msan/";
 
 void* BE_FE_rqst_content_message(int const conn_socket)
 {

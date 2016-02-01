@@ -88,7 +88,18 @@ static int rush_frontend_handle_new_file(rush_server_config const * const config
 			  config->watched_dir[config->watched_dir_len - 1] == '/' ? "" : "/",
 			  filename);
 
-        if (result > 0)
+	//check la liste globale et la clean
+
+	if (alive_table.BE_alive)
+	{
+	  alive_table.BE_alive = NULL;
+	}
+	send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, 0);
+	//if on a un result
+	upload_file(path, alive_table.BE_alive->elt, BE_PORT);
+
+
+	if (result > 0)
         {
             free(path);
             path = NULL;
@@ -486,7 +497,7 @@ int main(void)
     int multicast_socket = -1;
     rush_bind_server_multicast_socket(&multicast_socket, FE_MCAST_PORT, FRONTEND_GROUP);
 
-    config.watched_dir = "/tmp";
+    config.watched_dir = "/tmp/msan";
     config.watched_dir_len = strlen(config.watched_dir);
     config.unicast_bind_addr_str = "::";
     config.unicast_bind_port_str = "4242";
