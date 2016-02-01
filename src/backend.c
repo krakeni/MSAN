@@ -203,7 +203,7 @@ static void rush_backend_handle_new_connection_mcast(/* rush_server_config const
         else if (type == rush_message_type_alive)
         {
             //TYPE 7
-	    
+
         }
         else if (type == rush_message_type_discover)
         {
@@ -259,7 +259,8 @@ static int rush_backend_handle_new_connection(rush_server_config const * const c
                 else if (type == rush_message_type_get_file_response)
                 {
                     // TYPE == 5
-                    BE_FE_send_content_message(conn_socket);
+		  printf("Type5\n");
+		  BE_FE_send_content_message(conn_socket);
                 }
                 else
                 {
@@ -462,7 +463,7 @@ int main(void)
     int unicast_socket = -1;
     int inotify_fd = -1;
     int dir_inotify_fd = -1;
-    thread_args args = { 0 }; 
+    thread_args args = { 0 };
     args.address = LOCAL_IFACE;
     args.port = FRONTEND_PORT;
 

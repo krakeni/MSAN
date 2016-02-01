@@ -22,7 +22,7 @@
 #endif
 
 
-char *FRONT_ADDRESS = "192.168.1.234";
+char *FRONT_ADDRESS = "192.168.56.104";
 int FRONT_PORT = 4242;
 
 void option_help()

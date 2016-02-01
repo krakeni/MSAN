@@ -97,7 +97,10 @@ static int rush_frontend_handle_new_file(rush_server_config const * const config
 	send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, 0);
 
 	if (alive_table.BE_alive)
+	{
+	  printf("We push file to: %s\n", alive_table.BE_alive->elt);
 	  upload_file(path, alive_table.BE_alive->elt, BE_PORT);
+	}
 	else
 	{
 	  fprintf(stderr, "No backend :(\n");
