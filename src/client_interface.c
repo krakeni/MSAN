@@ -49,13 +49,14 @@ int main(int argc, char **argv)
   int list_flag = 0;
   char *get_value = NULL;
   char *upl_value = NULL;
+  char *front_address = NULL;
 
   int index;
   int c;
 
   opterr = 0;
 
-  while ((c = getopt (argc, argv, "lu:g:")) != -1)
+  while ((c = getopt (argc, argv, "lu:g:f:")) != -1)
     switch (c)
     {
       case 'g':
@@ -66,7 +67,11 @@ int main(int argc, char **argv)
         break;
       case 'u':
         printf("optarg: %s\n", optarg);
-        return upload_file(optarg, FRONT_ADDRESS, 4242);
+        upl_value = optarg;
+//        return upload_file(optarg, FRONT_ADDRESS, 4242);
+        break;
+      case 'f':
+        front_address = optarg;
         break;
       case '?':
         if (optopt == 'c')
@@ -81,6 +86,12 @@ int main(int argc, char **argv)
       default:
         abort ();
     }
+
+  if (front_address != NULL && upl_value != NULL)
+  {
+    return upload_file(upl_value, front_address, 4242); 
+  }
+
   for (index = optind; index < argc; index++)
     printf ("Non-option argument %s\n", argv[index]);
 
