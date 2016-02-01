@@ -1,6 +1,16 @@
 #ifndef LIB_H_
 #define LIB_H_
 
+#include <libgen.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <string.h>
+#include <netinet/ip.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <fcntl.h>
 #include <arpa/inet.h>
 #include <assert.h>
 #include <errno.h>
@@ -20,6 +30,7 @@
 #include <unistd.h>
 #include "rush.h"
 
+int upload_file(char *path, char *address, int port);
 
 struct namelist *read_files_from_backend(const rush_server_config *config);
 
