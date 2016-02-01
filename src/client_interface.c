@@ -22,7 +22,7 @@
 #endif
 
 
-char *FRONT_ADDRESS = "192.168.56.104";
+char *FRONT_ADDRESS = "192.168.1.234";
 int FRONT_PORT = 4242;
 
 void option_help()
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
         break;
       case 'u':
         printf("optarg: %s\n", optarg);
-        return upload_file(optarg, "127.0.0.1", 4242);
+        return upload_file(optarg, FRONT_ADDRESS, 4242);
         break;
       case '?':
         if (optopt == 'c')

@@ -95,9 +95,14 @@ static int rush_frontend_handle_new_file(rush_server_config const * const config
 	  alive_table.BE_alive = NULL;
 	}
 	send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, 0);
-	//if on a un result
-	upload_file(path, alive_table.BE_alive->elt, BE_PORT);
 
+	if (alive_table.BE_alive)
+	  upload_file(path, alive_table.BE_alive->elt, BE_PORT);
+	else
+	{
+	  fprintf(stderr, "No backend :(\n");
+	  return -1;
+	}
 
 	if (result > 0)
         {
