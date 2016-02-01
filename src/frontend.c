@@ -510,8 +510,6 @@ int main(void)
     config.unicast_bind_addr_str = "::";
     config.unicast_bind_port_str = "4242";
 
-    send_mcast_discover(BE_MCAST_PORT, SAN_GROUP ,0);
-
     int result = rush_frontend_watch_dir(config.watched_dir,
 					 &inotify_fd,
 					 &dir_inotify_fd);
