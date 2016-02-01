@@ -95,7 +95,7 @@ static int rush_frontend_handle_new_file(rush_server_config const * const config
 	  alive_table.BE_alive = NULL;
 	}
 	send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, 0);
-	sleep(3);
+	sleep(2);
 	if (first_back_address)
 	{
 	  printf("We push file to: %s\n", first_back_address);
@@ -513,6 +513,8 @@ int main(void)
     int result = rush_frontend_watch_dir(config.watched_dir,
 					 &inotify_fd,
 					 &dir_inotify_fd);
+
+    send_mcast_discover(BE_MCAST_PORT, SAN_GROUP, 0);
 
     if (result == 0)
     {
