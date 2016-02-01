@@ -98,8 +98,8 @@ static int rush_frontend_handle_new_file(rush_server_config const * const config
 	sleep(1);
 	if (first_back_address)
 	{
-	  printf("We push file to: %s\n", alive_table.BE_alive->elt);
-	  upload_file(path, alive_table.BE_alive->elt, BE_PORT);
+	  printf("We push file to: %s\n", first_back_address);
+	  upload_file(path, first_back_address, BE_PORT);
 	}
 	else
 	{
